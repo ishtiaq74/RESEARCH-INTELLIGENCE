@@ -1,0 +1,17 @@
+# DECISIONS LOG
+
+Format: ID — decision — reason — alternatives — status.
+
+D-001 — Monorepo: /frontend, /backend, /docs. Simple for a solo owner and one builder agent. Status: proposed.
+D-002 — Frontend: Next.js + TypeScript. Mature, good PDF viewer libraries. Alt: Vite + React. Status: proposed.
+D-003 — Backend: Python + FastAPI. Best PDF/AI tooling in Python. Alt: TypeScript backend. Status: proposed.
+D-004 — Database: PostgreSQL + pgvector, run locally in Docker. One system for relational data, vectors, and full-text search; free. Alt: Pinecone/Qdrant/Chroma. Status: proposed.
+D-005 — Auth: open-source library for email + password (e.g. FastAPI-Users), not hand-written. Status: proposed; confirm at T2.
+D-006 — File storage: local folder behind a storage interface. Free; swappable later. Status: proposed.
+D-007 — PDF parsing: PyMuPDF behind a parser interface. Gives page-level text with positions. NOTE: AGPL license; acceptable for a local portfolio build, must be revisited before any public launch. Status: proposed.
+D-008 — Background jobs: a `jobs` table plus a worker loop. No Redis/Celery for MVP. Status: proposed.
+D-009 — Embeddings: small open-source model on CPU behind an interface. Free; slower. Model choice deferred to T5 and decided by evaluation. Status: proposed.
+D-010 — LLM: provider interface; free-tier API and/or local model. Provider NOT yet chosen; owner must check current free-tier limits and data-use terms. Status: open.
+D-011 — Scanned PDFs rejected in MVP (no OCR). Status: accepted by owner.
+D-012 — Zero-cost rule: no paid services. Status: accepted by owner.
+D-013 — Continuity: repo docs are the project's memory; commit, push, and update HANDOFF.md after every sub-step. Status: accepted.
