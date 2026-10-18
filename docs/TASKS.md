@@ -2,15 +2,15 @@
 
 Status values: todo | in-progress | done | blocked
 
-## T0-CONTINUITY — status: in-progress
+## T0-CONTINUITY — status: done
 Goal: continuity docs and GitHub remote exist.
-- [ ] T0.1 Repo initialized, docs committed and pushed to GitHub
-- [ ] T0.2 Fresh session passes the resume test (states project state correctly from docs alone)
+- [x] T0.1 Repo initialized, docs committed and pushed to GitHub
+- [x] T0.2 Fresh session passes the resume test (states project state correctly from docs alone)
 Acceptance: files visible on GitHub; new session answers resume prompt correctly.
 
-## T1-SCAFFOLD — status: todo
+## T1-SCAFFOLD — status: in-progress
 Goal: empty skeleton, no product features.
-- [ ] T1.1 Backend skeleton: FastAPI, GET /health, env-based config, layered folders, one passing test
+- [x] T1.1 Backend skeleton: FastAPI, GET /health, env-based config, layered folders, one passing test
 - [ ] T1.2 Frontend skeleton: Next.js + TypeScript page that calls /health
 - [ ] T1.3 Docker Compose with Postgres + pgvector; Alembic with one empty migration
 - [ ] T1.4 README with exact run steps; verify from a fresh clone
