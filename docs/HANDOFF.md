@@ -1,17 +1,17 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.1b done)
+Last updated by: Antigravity (T1.2a done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
 - T1.1 Backend skeleton: **done**.
-- T1.1b Linting: **done** — ruff 0.17.1 and mypy 2.4.0 added, all versions pinned, both pass clean.
-  - `ruff check app/ tests/` → All checks passed!
-  - `mypy app/ tests/` → Success: no issues found in 10 source files
-  - `pytest` → 2 passed in 0.47s
+- T1.1b Linting: **done** — ruff 0.17.1, mypy 2.4.0, all pinned.
+- T1.2a Frontend skeleton: **done** — Next.js 16.4.2, App Router, TypeScript strict, ESLint.
+  - All versions pinned in package.json.
+  - `npm run lint` → passed, `npx tsc --noEmit` → passed, `npm run build` → compiled successfully.
 
 ## In progress
-- **T1.2a**: Creating frontend/ with Next.js App Router + TypeScript.
+- **T1.2b**: Home page that fetches /health and displays status, version, app_name with loading/error states.
 
 ## Next step
 - **T1.2 Frontend skeleton**: Next.js + TypeScript page that calls `GET /health` and shows the result.
