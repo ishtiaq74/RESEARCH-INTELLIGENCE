@@ -1,16 +1,17 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.1 done)
+Last updated by: Antigravity (T1.1b done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
 - T1.1 Backend skeleton: **done**.
-  - `backend/` created: FastAPI app factory, `GET /health`, pydantic-settings config, layered folders (routers / services / repositories / models).
-  - 2 tests pass: `test_health_returns_200`, `test_health_response_body`.
-  - Test output: `2 passed, 0 failed in 5.07s` (Python 3.12, pytest 9.1.1).
+- T1.1b Linting: **done** — ruff 0.17.1 and mypy 2.4.0 added, all versions pinned, both pass clean.
+  - `ruff check app/ tests/` → All checks passed!
+  - `mypy app/ tests/` → Success: no issues found in 10 source files
+  - `pytest` → 2 passed in 0.47s
 
 ## In progress
-- Nothing — T1.1 just committed; about to start T1.2.
+- **T1.2a**: Creating frontend/ with Next.js App Router + TypeScript.
 
 ## Next step
 - **T1.2 Frontend skeleton**: Next.js + TypeScript page that calls `GET /health` and shows the result.
