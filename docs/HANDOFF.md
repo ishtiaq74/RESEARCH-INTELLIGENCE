@@ -14,7 +14,7 @@ Last updated by: Antigravity (T1.2a done)
 - **T1.2b**: Home page that fetches /health and displays status, version, app_name with loading/error states.
 
 ## Next step
-- **T1.2 Frontend skeleton**: Next.js + TypeScript page that calls `GET /health` and shows the result.
+- Complete T1.2b → T1.2c → T1.2d, then wait for owner to approve T1.3.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
