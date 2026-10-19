@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.2e-2 done)
+Last updated by: Antigravity (T1.2e-3 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -12,12 +12,13 @@ Last updated by: Antigravity (T1.2e-2 done)
 - T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL`.
 - T1.2e-1 Testable app factory: **done** — `create_app()` accepts `cfg: Settings | None`; `app = create_app()` at module level preserved. `test_cors.py` rewritten to use `create_app(Settings(cors_origins=...))` directly; hand-built `_make_client` removed.
 - T1.2e-2 No-wildcard enforcement: **done** — `Settings` now has a `field_validator` that raises `ValueError` at startup if `cors_origins` is empty or contains `*`. Tests: wildcard raises, wildcard-in-list raises, empty raises.
+- T1.2e-3 Narrow CORS: **done** — `allow_credentials=False`, `allow_methods=["GET", "OPTIONS"]`, `allow_headers=["Content-Type", "Authorization"]`. Comment in code: "T2 will revisit allow_methods and allow_headers when auth is designed." (Code landed in T1.2e-1 commit; this commit records the documentation.)
 
 ## In progress
-- T1.2e-3: Narrow allow_methods/allow_headers in create_app() (already committed with T1.2e-1). T1.2e-4 next.
+- T1.2e-4: Investigate and remove/explain `cacheComponents` and `partialPrefetching` in next.config.ts.
 
 ## Next step
-- **T1.2e-4**: Investigate and remove/explain `cacheComponents` and `partialPrefetching` in next.config.ts; run frontend checks.
+- **T1.2e-4**: Check git history and Next.js docs to determine origin of those config keys. Remove if unexplained. Then run npm run lint, npx tsc --noEmit, npm run build.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
