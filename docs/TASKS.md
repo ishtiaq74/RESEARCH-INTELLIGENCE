@@ -14,8 +14,8 @@ Goal: empty skeleton, no product features.
 - [ ] T1.2 Frontend skeleton: Next.js + TypeScript page that calls /health
   - [x] T1.2a–d: skeleton, home page, CORS config, frontend env
   - [x] T1.2e-1: Testable app factory — create_app(cfg) optional param; test_cors.py rewritten
-  - [ ] T1.2e-2: Enforce no wildcard in Settings
-  - [ ] T1.2e-3: Narrow CORS methods/headers
+  - [x] T1.2e-2: Enforce no wildcard — field_validator on cors_origins; wildcard/empty raise at startup
+  - [ ] T1.2e-3: Narrow CORS methods/headers (allow_credentials=False, specific methods/headers)
   - [ ] T1.2e-4: Explain/remove next.config.ts options; run frontend checks
 - [ ] T1.3 Docker Compose with Postgres + pgvector; Alembic with one empty migration
 - [ ] T1.4 README with exact run steps; verify from a fresh clone

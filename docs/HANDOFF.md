@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.2e-1 done)
+Last updated by: Antigravity (T1.2e-2 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -11,14 +11,13 @@ Last updated by: Antigravity (T1.2e-1 done)
 - T1.2c Backend CORS: **done** — `CORS_ORIGINS` setting (comma-separated, default `http://localhost:3000`, no wildcard), wired via CORSMiddleware. Test confirms allowed origin gets header, disallowed does not.
 - T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL`.
 - T1.2e-1 Testable app factory: **done** — `create_app()` accepts `cfg: Settings | None`; `app = create_app()` at module level preserved. `test_cors.py` rewritten to use `create_app(Settings(cors_origins=...))` directly; hand-built `_make_client` removed.
+- T1.2e-2 No-wildcard enforcement: **done** — `Settings` now has a `field_validator` that raises `ValueError` at startup if `cors_origins` is empty or contains `*`. Tests: wildcard raises, wildcard-in-list raises, empty raises.
 
 ## In progress
-- T1.2e-2: Add wildcard/empty validation to Settings. T1.2e-3: Narrow CORS methods/headers.
+- T1.2e-3: Narrow allow_methods/allow_headers in create_app() (already committed with T1.2e-1). T1.2e-4 next.
 
 ## Next step
-- **T1.2e-2**: Add `field_validator` to Settings; enforce no wildcard, no empty list.
-- **T1.2e-3**: Narrow allow_methods/allow_headers in create_app().
-- **T1.2e-4**: Investigate and remove/explain next.config.ts options.
+- **T1.2e-4**: Investigate and remove/explain `cacheComponents` and `partialPrefetching` in next.config.ts; run frontend checks.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).

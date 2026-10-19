@@ -1,6 +1,7 @@
 """Application configuration loaded from environment variables."""
 from __future__ import annotations
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -14,6 +15,23 @@ class Settings(BaseSettings):
 
     # CORS: comma-separated list of allowed origins. No wildcard allowed.
     cors_origins: str = "http://localhost:3000"
+
+    @field_validator("cors_origins")
+    @classmethod
+    def cors_origins_no_wildcard(cls, v: str) -> str:
+        """Reject wildcard or empty CORS origins at startup."""
+        origins = [o.strip() for o in v.split(",") if o.strip()]
+        if not origins:
+            raise ValueError(
+                "CORS_ORIGINS must not be empty. "
+                "Provide at least one explicit origin, e.g. 'http://localhost:3000'."
+            )
+        if "*" in origins:
+            raise ValueError(
+                "CORS_ORIGINS must not contain the wildcard '*'. "
+                "List explicit origins instead."
+            )
+        return v
 
     @property
     def cors_origins_list(self) -> list[str]:
