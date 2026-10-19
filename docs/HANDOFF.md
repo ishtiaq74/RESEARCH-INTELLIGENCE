@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.2b/c/d done)
+Last updated by: Antigravity (T1.2e-1 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -10,12 +10,15 @@ Last updated by: Antigravity (T1.2b/c/d done)
 - T1.2b Home page: **done** — fetches `{NEXT_PUBLIC_API_BASE_URL}/health`, shows loading/ok/error states. Boilerplate SVGs removed, dark-mode CSS removed, README replaced.
 - T1.2c Backend CORS: **done** — `CORS_ORIGINS` setting (comma-separated, default `http://localhost:3000`, no wildcard), wired via CORSMiddleware. Test confirms allowed origin gets header, disallowed does not.
 - T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL`.
+- T1.2e-1 Testable app factory: **done** — `create_app()` accepts `cfg: Settings | None`; `app = create_app()` at module level preserved. `test_cors.py` rewritten to use `create_app(Settings(cors_origins=...))` directly; hand-built `_make_client` removed.
 
 ## In progress
-- Nothing. Waiting for owner to confirm live test observations and approve T1.3.
+- T1.2e-2: Add wildcard/empty validation to Settings. T1.2e-3: Narrow CORS methods/headers.
 
 ## Next step
-- **T1.3**: Docker Compose with Postgres + pgvector; Alembic with one empty migration. (Do not start until owner says so.)
+- **T1.2e-2**: Add `field_validator` to Settings; enforce no wildcard, no empty list.
+- **T1.2e-3**: Narrow allow_methods/allow_headers in create_app().
+- **T1.2e-4**: Investigate and remove/explain next.config.ts options.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
