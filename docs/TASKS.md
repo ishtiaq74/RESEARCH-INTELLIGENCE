@@ -16,7 +16,7 @@ Goal: empty skeleton, no product features.
   - [x] T1.2e-1: Testable app factory — create_app(cfg) optional param; test_cors.py rewritten
   - [x] T1.2e-2: Enforce no wildcard — field_validator on cors_origins; wildcard/empty raise at startup
   - [x] T1.2e-3: Narrow CORS — allow_credentials=False, methods=[GET,OPTIONS], headers=[Content-Type,Authorization]
-  - [ ] T1.2e-4: Explain/remove next.config.ts options; run frontend checks
+  - [x] T1.2e-4: next.config.ts explained — cacheComponents+partialPrefetching are documented Next.js 15+ features added by create-next-app; comments added; lint/tsc/build pass
 - [ ] T1.3 Docker Compose with Postgres + pgvector; Alembic with one empty migration
 - [ ] T1.4 README with exact run steps; verify from a fresh clone
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
