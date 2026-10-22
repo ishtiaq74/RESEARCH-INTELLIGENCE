@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3d-4 done)
+Last updated by: Antigravity (T1.4a+T1.4b done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -23,12 +23,16 @@ Last updated by: Antigravity (T1.3d-4 done)
 - T1.3d-1 follow-up: **done** — wrapped migration lifecycle and assertions in `test_alembic_migration_via_settings_env_var` in a `try/finally` block so the real-db safety check and engine disposal always run even if migration commands fail.
 - T1.3d-3 Document batch-mode migration risk: **done** — recorded SQLite batch-mode + foreign keys migration risk note in HANDOFF.md and DECISIONS_LOG.md (D-014).
 - T1.3d-4 Docs verification & clean handoff: **done** — verified via `git log --stat -8 --oneline -- docs` that all 8 recent commits updated both `HANDOFF.md` and `TASKS.md`.
+- T1.4a Root README: **done** — wrote `README.md` at repo root covering project description, requirements, backend/frontend setup (Windows PowerShell), health-check verification, checks commands, troubleshooting, project layout.
+- T1.4b Alembic usage note: **done** — verified `alembic -c alembic.ini current` from `backend\` and `backend\.venv\Scripts\alembic -c backend\alembic.ini current` from repo root; both succeed. Documented in README.
 
 ## In progress
-- None (T1.3d complete; ready for T1.4).
+- T1.4c: Fresh-clone verification — clone into temp folder, follow README, paste output, fix any issues.
 
 ## Next step
-- **T1.4**: README and fresh-clone check — write root README with exact run steps for frontend and backend, verify from a fresh clone, ensure no secrets in repo, then merge `t1-scaffold` to `main`. (Do not start until instructed.)
+- **T1.4c**: Fresh-clone verification.
+- **T1.4d**: Stop before merging; report and wait for architect review.
+- **T1.4e**: Record minor known items in HANDOFF.md Known problems (docs only).
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
