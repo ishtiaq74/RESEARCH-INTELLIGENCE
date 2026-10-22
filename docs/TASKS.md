@@ -33,6 +33,7 @@ Goal: empty skeleton, no product features.
   - [x] T1.4c Fresh-clone verification (follow README only; fix if wrong)
   - [x] T1.4d Stop before merging (report and wait for architect review)
   - [x] T1.4e Record minor known items in HANDOFF.md Known problems
+  - [x] T1.4f README fixes (Node requirements provenance, Alembic table with pasted output, uvicorn command, troubleshooting)
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
 
 ## T2 Auth and projects — todo

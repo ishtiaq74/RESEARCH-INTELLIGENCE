@@ -11,12 +11,12 @@ A multi-document academic research workspace. Upload academic PDFs, ask question
 | Tool | Minimum | How verified |
 |------|---------|-------------|
 | Python | **3.12** | `pyproject.toml` sets `requires-python = ">=3.12"`; verified with Python 3.12.10 |
-| Node.js | **20** | `frontend/README.md` states 20+; verified with Node.js 24.15.0 (`node --version`) |
+| Node.js | **20** | Tested with 24.15.0 (`node --version`); 20.x minimum comes from `frontend/README.md` and is untested. Next.js 16.4.2 specifies `engines.node: ">=20.9.0"` in `frontend/node_modules/next/package.json`. |
 | Git | any recent | — |
 
 **Docker is not needed.** The database is SQLite (a local file).
 
-> **Note on folder location:** Do **not** clone this repo inside a OneDrive-synced folder (e.g. `Desktop`, `Documents`, `OneDrive`). SQLite WAL mode and `node_modules` do not work reliably under cloud sync. Use a plain local path such as `C:\dev\research-intelligence`.
+> **Note on folder location:** Do **not** clone this repo inside a OneDrive-synced folder (e.g. `Desktop`, `Documents`, `OneDrive`). Sync can cause problems with node_modules and SQLite files. Use a plain local path such as `C:\dev\research-intelligence`.
 
 > **macOS/Linux:** The commands below are Windows PowerShell. Equivalent bash commands are listed where they differ, but they are **unverified** — only PowerShell was tested.
 
@@ -49,7 +49,8 @@ Copy-Item .env.example .env
 alembic -c alembic.ini upgrade head
 
 # 6. Start the backend
-uvicorn app.main:app --reload
+uvicorn app.main:app --port 8000
+# Note: add --reload for development auto-reload (e.g. uvicorn app.main:app --port 8000 --reload)
 # Running at http://localhost:8000
 # Health check: http://localhost:8000/health
 ```
@@ -59,24 +60,44 @@ uvicorn app.main:app --reload
 
 ### Alembic: which folder to run from
 
-Alembic commands **must be run from the `backend\` folder** with `-c alembic.ini` (or `-c backend\alembic.ini` from the repo root):
+| Folder | Commands |
+|--------|----------|
+| `backend\` (recommended) | `alembic upgrade head`<br>`alembic current` |
+| Repo root | `backend\.venv\Scripts\alembic -c backend\alembic.ini <command>` |
 
-```powershell
-# From backend\ (recommended):
-alembic -c alembic.ini upgrade head
-alembic -c alembic.ini current
+**Output verified on temporary database (`7c75c84bb53a`):**
 
-# From the repo root (also works):
-backend\.venv\Scripts\alembic -c backend\alembic.ini upgrade head
+From `backend\`:
+```text
+> alembic upgrade head
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 7c75c84bb53a, empty initial migration
+
+> alembic current
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+7c75c84bb53a (head)
 ```
 
-**Verified:** both forms print `INFO [alembic.runtime.migration] Context impl SQLiteImpl.` without error.
+From repo root:
+```text
+> backend\.venv\Scripts\alembic -c backend\alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 7c75c84bb53a, empty initial migration
+
+> backend\.venv\Scripts\alembic -c backend\alembic.ini current
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+7c75c84bb53a (head)
+```
 
 ---
 
 ## Frontend setup
 
-Run all frontend commands from the `frontend\` folder.
+Run all frontend commands from the `frontend\` folder. (From repo root: `cd frontend`; or if in `backend\`: `cd ..\frontend`).
 
 ```powershell
 cd frontend
@@ -116,7 +137,7 @@ npm run dev
 cd backend
 # (virtual environment must be active)
 
-pytest tests\ -v                      # 22 tests, all should pass
+pytest tests\ -v                      # all should pass
 ruff check app/ tests/ alembic/       # linter — should print "All checks passed!"
 mypy app/ tests/ alembic/             # type checker — should print "Success: no issues found"
 ```
@@ -135,8 +156,18 @@ npm run build       # production build (optional for local dev)
 
 ## Troubleshooting
 
+### "Activate.ps1 cannot be loaded because running scripts is disabled"
+If `Activate.ps1` fails with "running scripts is disabled", run:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+This is run once and affects only the current user.
+
 ### "uvicorn is not recognized" (or any backend command not found)
 The virtual environment is not active. Run `.venv\Scripts\Activate.ps1` from `backend\`. Confirm your prompt shows `(.venv)`.
+
+### "npm audit" warnings after "npm ci"
+npm audit warnings after `npm ci` are expected; do **NOT** run `npm audit fix --force`.
 
 ### "Port 8000 is already in use"
 Find what is using the port before stopping it:

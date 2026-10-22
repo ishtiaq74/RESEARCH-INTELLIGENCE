@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.4e done)
+Last updated by: Antigravity (T1.4f done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -27,6 +27,7 @@ Last updated by: Antigravity (T1.4e done)
 - T1.4b Alembic usage note: **done** — verified `alembic -c alembic.ini current` from `backend\` and `backend\.venv\Scripts\alembic -c backend\alembic.ini current` from repo root; both succeed. Documented in README.
 - T1.4c Fresh-clone verification: **done** — cloned origin/t1-scaffold into a temporary directory outside repo and OneDrive ($env:TEMP\ri-fresh-clone-test); followed README step-by-step with no extra knowledge; venv creation, activation, pip install, alembic upgrade head, pytest (22 passed), ruff, mypy, npm ci, npm run lint, npm run type-check, and npm run build all verified passing; temporary clone deleted.
 - T1.4e Minor known items recorded: **done** — documented SQLite URL prefix edge case, custom creator URL options bypass, and unused ensure_data_dir in Known problems.
+- T1.4f README fixes: **done** — refined README.md with Node requirement provenance and tested version, OneDrive sync warning clarification, uvicorn default command with --port 8000 and --reload note, Alembic table with real outputs showing migration revision 7c75c84bb53a from backend and root, clarified frontend path from repo root, removed hardcoded test count, and added execution policy and npm audit troubleshooting entries.
 
 ## In progress
 None (T1.4 complete, stopped before merge per T1.4d).
