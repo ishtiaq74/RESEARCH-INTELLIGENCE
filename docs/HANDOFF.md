@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3d-1 done)
+Last updated by: Antigravity (T1.3d-2 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -19,13 +19,15 @@ Last updated by: Antigravity (T1.3d-1 done)
 - T1.3b FTS5 check: **done** — verified SQLite FTS5 extension with virtual table and MATCH query test (Python 3.12.10, SQLite 3.49.1).
 - T1.3c Alembic: **done** — Alembic 1.20.1 pinned, backend/alembic.ini without hardcoded URL, env.py reading URL dynamically from app Settings with SQLite batch mode (render_as_batch=True), one empty initial migration, migration lifecycle test passing (upgrade head -> upgrade head -> downgrade base -> upgrade head).
 - T1.3d-1 Settings path tested: **done** — new test `test_alembic_migration_via_settings_env_var` asserts `sqlalchemy.url` is absent from alembic.ini, sets DB only via `DATABASE_URL` env var, runs full lifecycle, and asserts real `data/app.db` was not created or modified. Test proven meaningful: temporarily breaking `get_url()` causes it to fail with `OperationalError: no such table: alembic_version`.
+- T1.3d-2 No side effects on import: **done** — `session.py` uses custom SQLite creator so `data/` folder creation is deferred to first connection; import of `session.py` / `main.py` has no filesystem side effects; verified via isolated subprocess test `test_import_side_effects.py`.
 
 ## In progress
-- T1.3d-2 No side effects on import.
+- T1.3d-1 follow-up: Ensure real-db safety check in `test_alembic_migration_via_settings_env_var` runs in try/finally even if migration steps fail.
 
 ## Next step
-- **T1.3d-2**: No side effects on import — refactor session.py so data/ is created on first connection, not at import time.
+- **T1.3d-1 follow-up**: Wrap real-db check in try/finally or fixture in `test_migrations.py`.
 - **T1.3d-3**: Docs — record SQLite batch-mode + foreign-keys migration risk in HANDOFF.md and DECISIONS_LOG.md.
+- **T1.3d-4**: Check git log for docs updates; set accurate In progress and Next step.
 - After T1.3d done: **T1.4** README + fresh-clone verify.
 
 ## Known problems / open questions

@@ -24,7 +24,7 @@ Goal: empty skeleton, no product features.
   - [x] T1.3c Alembic (empty initial migration, upgrade/downgrade test)
 - [ ] T1.3d Review findings on T1.3
   - [x] T1.3d-1 Settings path test (no set_main_option; env-var only; real-db safety check)
-  - [ ] T1.3d-2 No side effects on import (data/ not created until first connection)
+  - [x] T1.3d-2 No side effects on import (data/ not created until first connection)
   - [ ] T1.3d-3 Document batch-mode + foreign-keys migration risk in HANDOFF and DECISIONS_LOG
 - [ ] T1.4 README with exact run steps; verify from a fresh clone
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
