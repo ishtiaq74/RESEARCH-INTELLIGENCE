@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.5c done)
+Last updated by: Antigravity (T1.5d done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -31,12 +31,13 @@ Last updated by: Antigravity (T1.5c done)
 - T1.5a README Node fix: **done** — updated Node.js minimum to 20.9 in README.md Requirements table to match Next.js engines.node ">=20.9.0".
 - T1.5b Frontend audit: **done** — ran npm audit, saved raw output to docs/audit-raw/npm-audit.txt; identified 5 high severity findings (all in a single dev-only chain rooted in braces <=3.0.3); verified dev-only via npm ls --omit=dev; not plausibly exploitable in our codebase (used for file path globs during ESLint, not on untrusted input).
 - T1.5c Backend audit: **done** — created isolated temporary venv outside repo, installed pip-audit, audited installed packages and pinned pyproject.toml dependencies; saved outputs to docs/audit-raw/pip-audit-installed.txt (0 app runtime vulnerabilities; 1 dev transitive in certifi 2026.10.18 fixed in 2026.10.19; 6 unique tooling advisories in virtualenv pip 25.0.1) and docs/audit-raw/pip-audit-pinned.txt (no known vulnerabilities found); deleted temporary venv.
+- T1.5d ESLint assessment: **done** — verified npm view eslint dist-tags (maintenance: 9.39.5, latest: 10.13.0) and eslint-config-next@16.4.2 peerDependencies (eslint: >=9.0.0); saved to docs/audit-raw/eslint-versions.txt; peer dependency allows ESLint 10; lowest-risk upgrade path is deferring ESLint 10 to T2 to avoid major version churn during scaffold.
 
 ## In progress
-- T1.5d ESLint assessment (REPORT ONLY).
+- T1.5e Write docs/DEPENDENCY_AUDIT.md.
 
 ## Next step
-- T1.5d ESLint assessment, T1.5e Write docs/DEPENDENCY_AUDIT.md.
+- T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge.
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
