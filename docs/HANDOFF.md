@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3d-1 follow-up done)
+Last updated by: Antigravity (T1.3d-3 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -21,16 +21,17 @@ Last updated by: Antigravity (T1.3d-1 follow-up done)
 - T1.3d-1 Settings path tested: **done** — new test `test_alembic_migration_via_settings_env_var` asserts `sqlalchemy.url` is absent from alembic.ini, sets DB only via `DATABASE_URL` env var, runs full lifecycle, and asserts real `data/app.db` was not created or modified. Test proven meaningful: temporarily breaking `get_url()` causes it to fail with `OperationalError: no such table: alembic_version`.
 - T1.3d-2 No side effects on import: **done** — `session.py` uses custom SQLite creator so `data/` folder creation is deferred to first connection; import of `session.py` / `main.py` has no filesystem side effects; verified via isolated subprocess test `test_import_side_effects.py`.
 - T1.3d-1 follow-up: **done** — wrapped migration lifecycle and assertions in `test_alembic_migration_via_settings_env_var` in a `try/finally` block so the real-db safety check and engine disposal always run even if migration commands fail.
+- T1.3d-3 Document batch-mode migration risk: **done** — recorded SQLite batch-mode + foreign keys migration risk note in HANDOFF.md and DECISIONS_LOG.md (D-014).
 
 ## In progress
-- T1.3d-3: Document SQLite batch-mode + foreign keys migration risk in HANDOFF.md and DECISIONS_LOG.md.
+- T1.3d-4: Inspect git log for docs updates; finalize HANDOFF.md status and next step.
 
 ## Next step
-- **T1.3d-3**: Docs — record SQLite batch-mode + foreign-keys migration risk in HANDOFF.md and DECISIONS_LOG.md.
 - **T1.3d-4**: Check git log for docs updates; set accurate In progress and Next step.
 - After T1.3d done: **T1.4** README + fresh-clone verify.
 
 ## Known problems / open questions
+- When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
 - LLM provider not chosen (D-010).
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
 - Email verification / Google sign-in and hosting jurisdiction undecided (not needed until later).

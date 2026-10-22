@@ -15,3 +15,4 @@ D-010 — LLM: provider interface; free-tier API and/or local model. Provider NO
 D-011 — Scanned PDFs rejected in MVP (no OCR). Status: accepted by owner.
 D-012 — Zero-cost rule: no paid services. Status: accepted by owner.
 D-013 — Continuity: repo docs are the project's memory; commit, push, and update HANDOFF.md after every sub-step. Status: accepted.
+D-014 — SQLite batch-mode migration risk: When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists. Status: noted; action deferred to T2.
