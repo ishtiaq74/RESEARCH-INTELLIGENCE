@@ -38,7 +38,7 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
 - [ ] T1.5 Dependency audit & final polish
   - [x] T1.5a README Node fix (Node.js minimum 20.9 matching Next.js engines.node)
   - [x] T1.5b Frontend audit (npm audit report, runtime vs dev, safe fix analysis)
-  - [ ] T1.5c Backend audit (pip-audit report in temporary venv)
+  - [x] T1.5c Backend audit (pip-audit report in temporary venv)
   - [ ] T1.5d ESLint assessment (eslint 9.x status and Next.js compatibility)
   - [ ] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
 
