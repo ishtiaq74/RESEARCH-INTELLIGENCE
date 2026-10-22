@@ -35,12 +35,12 @@ Goal: empty skeleton, no product features.
   - [x] T1.4e Record minor known items in HANDOFF.md Known problems
   - [x] T1.4f README fixes (Node requirements provenance, Alembic table with pasted output, uvicorn command, troubleshooting)
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
-- [ ] T1.5 Dependency audit & final polish
+- [x] T1.5 Dependency audit & final polish
   - [x] T1.5a README Node fix (Node.js minimum 20.9 matching Next.js engines.node)
   - [x] T1.5b Frontend audit (npm audit report, runtime vs dev, safe fix analysis)
   - [x] T1.5c Backend audit (pip-audit report in temporary venv)
   - [x] T1.5d ESLint assessment (eslint 9.x status and Next.js compatibility)
-  - [ ] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
+  - [x] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
 
 ## T2 Auth and projects — todo
 ## T3 Secure PDF upload and storage — todo
