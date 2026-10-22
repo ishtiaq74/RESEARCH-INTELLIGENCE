@@ -20,7 +20,7 @@ Goal: empty skeleton, no product features.
 - [ ] T1.3 SQLite database + Alembic (replaces Docker/Postgres T1.3)
   - [x] T1.3-0 Correct the notes (docs only, no code)
   - [x] T1.3a Database module (SQLAlchemy 2.x, engine, session, data/ folder, tests)
-  - [ ] T1.3b FTS5 check (virtual table MATCH query test)
+  - [x] T1.3b FTS5 check (virtual table MATCH query test)
   - [ ] T1.3c Alembic (empty initial migration, upgrade/downgrade test)
 - [ ] T1.4 README with exact run steps; verify from a fresh clone
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
