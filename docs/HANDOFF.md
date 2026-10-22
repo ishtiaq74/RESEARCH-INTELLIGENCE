@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.5a done)
+Last updated by: Antigravity (T1.5b done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -29,12 +29,13 @@ Last updated by: Antigravity (T1.5a done)
 - T1.4e Minor known items recorded: **done** — documented SQLite URL prefix edge case, custom creator URL options bypass, and unused ensure_data_dir in Known problems.
 - T1.4f README fixes: **done** — refined README.md with Node requirement provenance and tested version, OneDrive sync warning clarification, uvicorn default command with --port 8000 and --reload note, Alembic table with real outputs showing migration revision 7c75c84bb53a from backend and root, clarified frontend path from repo root, removed hardcoded test count, and added execution policy and npm audit troubleshooting entries.
 - T1.5a README Node fix: **done** — updated Node.js minimum to 20.9 in README.md Requirements table to match Next.js engines.node ">=20.9.0".
+- T1.5b Frontend audit: **done** — ran npm audit, saved raw output to docs/audit-raw/npm-audit.txt; identified 5 high severity findings (all in a single dev-only chain rooted in braces <=3.0.3); verified dev-only via npm ls --omit=dev; not plausibly exploitable in our codebase (used for file path globs during ESLint, not on untrusted input).
 
 ## In progress
-- T1.5b Frontend audit (npm audit report, runtime vs dev, safe fix analysis).
+- T1.5c Backend audit (REPORT ONLY).
 
 ## Next step
-- T1.5b Frontend audit, then T1.5c Backend audit, T1.5d ESLint assessment, T1.5e Write docs/DEPENDENCY_AUDIT.md.
+- T1.5c Backend audit, then T1.5d ESLint assessment, T1.5e Write docs/DEPENDENCY_AUDIT.md.
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
