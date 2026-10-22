@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3d-3 done)
+Last updated by: Antigravity (T1.3d-4 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -22,13 +22,13 @@ Last updated by: Antigravity (T1.3d-3 done)
 - T1.3d-2 No side effects on import: **done** — `session.py` uses custom SQLite creator so `data/` folder creation is deferred to first connection; import of `session.py` / `main.py` has no filesystem side effects; verified via isolated subprocess test `test_import_side_effects.py`.
 - T1.3d-1 follow-up: **done** — wrapped migration lifecycle and assertions in `test_alembic_migration_via_settings_env_var` in a `try/finally` block so the real-db safety check and engine disposal always run even if migration commands fail.
 - T1.3d-3 Document batch-mode migration risk: **done** — recorded SQLite batch-mode + foreign keys migration risk note in HANDOFF.md and DECISIONS_LOG.md (D-014).
+- T1.3d-4 Docs verification & clean handoff: **done** — verified via `git log --stat -8 --oneline -- docs` that all 8 recent commits updated both `HANDOFF.md` and `TASKS.md`.
 
 ## In progress
-- T1.3d-4: Inspect git log for docs updates; finalize HANDOFF.md status and next step.
+- None (T1.3d complete; ready for T1.4).
 
 ## Next step
-- **T1.3d-4**: Check git log for docs updates; set accurate In progress and Next step.
-- After T1.3d done: **T1.4** README + fresh-clone verify.
+- **T1.4**: README and fresh-clone check — write root README with exact run steps for frontend and backend, verify from a fresh clone, ensure no secrets in repo, then merge `t1-scaffold` to `main`. (Do not start until instructed.)
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
