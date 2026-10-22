@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.4f done)
+Last updated by: Antigravity (T1.5a done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -28,12 +28,13 @@ Last updated by: Antigravity (T1.4f done)
 - T1.4c Fresh-clone verification: **done** — cloned origin/t1-scaffold into a temporary directory outside repo and OneDrive ($env:TEMP\ri-fresh-clone-test); followed README step-by-step with no extra knowledge; venv creation, activation, pip install, alembic upgrade head, pytest (22 passed), ruff, mypy, npm ci, npm run lint, npm run type-check, and npm run build all verified passing; temporary clone deleted.
 - T1.4e Minor known items recorded: **done** — documented SQLite URL prefix edge case, custom creator URL options bypass, and unused ensure_data_dir in Known problems.
 - T1.4f README fixes: **done** — refined README.md with Node requirement provenance and tested version, OneDrive sync warning clarification, uvicorn default command with --port 8000 and --reload note, Alembic table with real outputs showing migration revision 7c75c84bb53a from backend and root, clarified frontend path from repo root, removed hardcoded test count, and added execution policy and npm audit troubleshooting entries.
+- T1.5a README Node fix: **done** — updated Node.js minimum to 20.9 in README.md Requirements table to match Next.js engines.node ">=20.9.0".
 
 ## In progress
-None (T1.4 complete, stopped before merge per T1.4d).
+- T1.5b Frontend audit (npm audit report, runtime vs dev, safe fix analysis).
 
 ## Next step
-Merge t1-scaffold into main after architect review, then T1.5.
+- T1.5b Frontend audit, then T1.5c Backend audit, T1.5d ESLint assessment, T1.5e Write docs/DEPENDENCY_AUDIT.md.
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.

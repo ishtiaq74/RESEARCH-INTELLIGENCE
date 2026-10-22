@@ -11,7 +11,7 @@ A multi-document academic research workspace. Upload academic PDFs, ask question
 | Tool | Minimum | How verified |
 |------|---------|-------------|
 | Python | **3.12** | `pyproject.toml` sets `requires-python = ">=3.12"`; verified with Python 3.12.10 |
-| Node.js | **20** | Tested with 24.15.0 (`node --version`); 20.x minimum comes from `frontend/README.md` and is untested. Next.js 16.4.2 specifies `engines.node: ">=20.9.0"` in `frontend/node_modules/next/package.json`. |
+| Node.js | **20.9** | Tested with 24.15.0 (`node --version`); 20.x minimum comes from `frontend/README.md` and is untested. Next.js 16.4.2 specifies `engines.node: ">=20.9.0"` in `frontend/node_modules/next/package.json`. |
 | Git | any recent | — |
 
 **Docker is not needed.** The database is SQLite (a local file).
