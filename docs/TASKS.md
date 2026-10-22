@@ -30,7 +30,7 @@ Goal: empty skeleton, no product features.
 - [ ] T1.4 README with exact run steps; verify from a fresh clone
   - [x] T1.4a Root README.md (project desc, requirements, backend/frontend setup, checks, troubleshooting, layout)
   - [x] T1.4b Alembic usage note (verified from backend/ and repo root; both succeed)
-  - [ ] T1.4c Fresh-clone verification (follow README only; fix if wrong)
+  - [x] T1.4c Fresh-clone verification (follow README only; fix if wrong)
   - [ ] T1.4d Stop before merging (report and wait for architect review)
   - [ ] T1.4e Record minor known items in HANDOFF.md Known problems
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.

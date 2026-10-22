@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.4a+T1.4b done)
+Last updated by: Antigravity (T1.4c done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -25,14 +25,14 @@ Last updated by: Antigravity (T1.4a+T1.4b done)
 - T1.3d-4 Docs verification & clean handoff: **done** — verified via `git log --stat -8 --oneline -- docs` that all 8 recent commits updated both `HANDOFF.md` and `TASKS.md`.
 - T1.4a Root README: **done** — wrote `README.md` at repo root covering project description, requirements, backend/frontend setup (Windows PowerShell), health-check verification, checks commands, troubleshooting, project layout.
 - T1.4b Alembic usage note: **done** — verified `alembic -c alembic.ini current` from `backend\` and `backend\.venv\Scripts\alembic -c backend\alembic.ini current` from repo root; both succeed. Documented in README.
+- T1.4c Fresh-clone verification: **done** — cloned origin/t1-scaffold into a temporary directory outside repo and OneDrive ($env:TEMP\ri-fresh-clone-test); followed README step-by-step with no extra knowledge; venv creation, activation, pip install, alembic upgrade head, pytest (22 passed), ruff, mypy, npm ci, npm run lint, npm run type-check, and npm run build all verified passing; temporary clone deleted.
 
 ## In progress
-- T1.4c: Fresh-clone verification — clone into temp folder, follow README, paste output, fix any issues.
+- T1.4e: Record minor known items in HANDOFF.md Known problems (docs only).
 
 ## Next step
-- **T1.4c**: Fresh-clone verification.
-- **T1.4d**: Stop before merging; report and wait for architect review.
 - **T1.4e**: Record minor known items in HANDOFF.md Known problems (docs only).
+- **T1.4d**: Stop before merging; report and wait for architect review.
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
