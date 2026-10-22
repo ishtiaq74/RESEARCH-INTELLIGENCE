@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]==0.54.0",
     "pydantic-settings==2.16.0",
     "sqlalchemy==2.1.6",
+    "alembic==1.20.1",
 ]
 
 [project.optional-dependencies]
@@ -17,6 +18,10 @@ dev = [
     "ruff==0.17.1",
     "mypy==2.4.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

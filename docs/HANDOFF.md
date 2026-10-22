@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3b done)
+Last updated by: Antigravity (T1.3c done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -17,12 +17,13 @@ Last updated by: Antigravity (T1.3b done)
 - T1.3-0 Correct notes: **done** — replaced Docker/Postgres plan in TASKS.md, HANDOFF.md, and DECISIONS_LOG.md (D-004) with SQLite + Alembic as approved by owner on 2026-10-19.
 - T1.3a Database module: **done** — SQLAlchemy 2.1.6 pinned, synchronous engine in app/db/session.py with SQLite pragmas (foreign_keys=ON, journal_mode=WAL), session dependency, BACKEND_DIR/data/app.db SQLite URL default, anchored .env, data/ auto-creation and gitignored, 8 new passing tests.
 - T1.3b FTS5 check: **done** — verified SQLite FTS5 extension with virtual table and MATCH query test (Python 3.12.10, SQLite 3.49.1).
+- T1.3c Alembic: **done** — Alembic 1.20.1 pinned, backend/alembic.ini without hardcoded URL, env.py reading URL dynamically from app Settings with SQLite batch mode (render_as_batch=True), one empty initial migration, migration lifecycle test passing (upgrade head -> upgrade head -> downgrade base -> upgrade head).
 
 ## In progress
-- T1.3c Alembic (empty initial migration, upgrade/downgrade test).
+- T1.3 Final verification (Step 5).
 
 ## Next step
-- **T1.3c**: Alembic (add pinned alembic to pyproject.toml, alembic.ini without hardcoded URL, env.py reading settings, single empty initial migration, upgrade/downgrade test).
+- **T1.4**: README with exact run steps; verify from a fresh clone.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
@@ -37,10 +38,11 @@ Last updated by: Antigravity (T1.3b done)
 cd backend
 python -m venv .venv
 .venv\Scripts\pip install -e ".[dev]"
+.venv\Scripts\alembic -c alembic.ini upgrade head
 .venv\Scripts\uvicorn app.main:app --reload   # http://localhost:8000/health
 .venv\Scripts\pytest tests\ -v
-.venv\Scripts\ruff check app/ tests/
-.venv\Scripts\mypy app/ tests/
+.venv\Scripts\ruff check app/ tests/ alembic/
+.venv\Scripts\mypy app/ tests/ alembic/
 ```
 
 ### Frontend
