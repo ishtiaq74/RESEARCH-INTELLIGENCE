@@ -41,6 +41,7 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
   - [x] T1.5c Backend audit (pip-audit report in temporary venv)
   - [x] T1.5d ESLint assessment (eslint 9.x status and Next.js compatibility)
   - [x] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
+  - [x] T1.5f Correct DEPENDENCY_AUDIT.md (raw severities, owner upgrade note, braces *, prod claims, watch list)
 
 ## T2 Auth and projects — todo
 ## T3 Secure PDF upload and storage — todo
