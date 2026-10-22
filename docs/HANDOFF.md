@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3c done)
+Last updated by: Antigravity (T1.3d-1 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -18,12 +18,15 @@ Last updated by: Antigravity (T1.3c done)
 - T1.3a Database module: **done** — SQLAlchemy 2.1.6 pinned, synchronous engine in app/db/session.py with SQLite pragmas (foreign_keys=ON, journal_mode=WAL), session dependency, BACKEND_DIR/data/app.db SQLite URL default, anchored .env, data/ auto-creation and gitignored, 8 new passing tests.
 - T1.3b FTS5 check: **done** — verified SQLite FTS5 extension with virtual table and MATCH query test (Python 3.12.10, SQLite 3.49.1).
 - T1.3c Alembic: **done** — Alembic 1.20.1 pinned, backend/alembic.ini without hardcoded URL, env.py reading URL dynamically from app Settings with SQLite batch mode (render_as_batch=True), one empty initial migration, migration lifecycle test passing (upgrade head -> upgrade head -> downgrade base -> upgrade head).
+- T1.3d-1 Settings path tested: **done** — new test `test_alembic_migration_via_settings_env_var` asserts `sqlalchemy.url` is absent from alembic.ini, sets DB only via `DATABASE_URL` env var, runs full lifecycle, and asserts real `data/app.db` was not created or modified. Test proven meaningful: temporarily breaking `get_url()` causes it to fail with `OperationalError: no such table: alembic_version`.
 
 ## In progress
-- T1.3 Final verification (Step 5).
+- T1.3d-2 No side effects on import.
 
 ## Next step
-- **T1.4**: README with exact run steps; verify from a fresh clone.
+- **T1.3d-2**: No side effects on import — refactor session.py so data/ is created on first connection, not at import time.
+- **T1.3d-3**: Docs — record SQLite batch-mode + foreign-keys migration risk in HANDOFF.md and DECISIONS_LOG.md.
+- After T1.3d done: **T1.4** README + fresh-clone verify.
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
