@@ -33,3 +33,9 @@ Thumbs.db
 # Node (for frontend added in T1.2)
 node_modules/
 .next/
+
+# Database & storage
+data/
+*.db
+*.db-wal
+*.db-shm

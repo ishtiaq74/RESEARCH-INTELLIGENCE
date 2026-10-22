@@ -19,7 +19,7 @@ Goal: empty skeleton, no product features.
   - [x] T1.2e-4: next.config.ts explained — cacheComponents+partialPrefetching are documented Next.js 15+ features added by create-next-app; comments added; lint/tsc/build pass
 - [ ] T1.3 SQLite database + Alembic (replaces Docker/Postgres T1.3)
   - [x] T1.3-0 Correct the notes (docs only, no code)
-  - [ ] T1.3a Database module (SQLAlchemy 2.x, engine, session, data/ folder, tests)
+  - [x] T1.3a Database module (SQLAlchemy 2.x, engine, session, data/ folder, tests)
   - [ ] T1.3b FTS5 check (virtual table MATCH query test)
   - [ ] T1.3c Alembic (empty initial migration, upgrade/downgrade test)
 - [ ] T1.4 README with exact run steps; verify from a fresh clone

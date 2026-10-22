@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.3-0 done)
+Last updated by: Antigravity (T1.3a done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -15,12 +15,12 @@ Last updated by: Antigravity (T1.3-0 done)
 - T1.2e-3 Narrow CORS: **done** — `allow_credentials=False`, `allow_methods=["GET", "OPTIONS"]`, `allow_headers=["Content-Type", "Authorization"]`. Comment in code: "T2 will revisit allow_methods and allow_headers when auth is designed."
 - T1.2e-4 next.config.ts explained: **done** — `cacheComponents` and `partialPrefetching` are both documented Next.js 15+/16+ features. Both were added by create-next-app during T1.2a scaffolding. Comments added in next.config.ts. Frontend checks: lint passed, tsc --noEmit passed, npm run build passed.
 - T1.3-0 Correct notes: **done** — replaced Docker/Postgres plan in TASKS.md, HANDOFF.md, and DECISIONS_LOG.md (D-004) with SQLite + Alembic as approved by owner on 2026-10-19.
+- T1.3a Database module: **done** — SQLAlchemy 2.1.6 pinned, synchronous engine in app/db/session.py with SQLite pragmas (foreign_keys=ON, journal_mode=WAL), session dependency, BACKEND_DIR/data/app.db SQLite URL default, anchored .env, data/ auto-creation and gitignored, 8 new passing tests.
 
 ## In progress
-- T1.3a Database module (SQLAlchemy 2.x synchronous engine, session dependency, data/ folder, config, tests).
+- T1.3b FTS5 check (virtual table MATCH query test).
 
 ## Next step
-- **T1.3a**: Database module (add pinned SQLAlchemy 2.x, configure BACKEND_DIR/data/app.db SQLite URL, synchronous engine, session dependency, data/ auto-creation, tests).
 - **T1.3b**: FTS5 check (virtual table MATCH query test).
 - **T1.3c**: Alembic (alembic.ini without hardcoded URL, env.py reading settings, single empty initial migration, upgrade/downgrade test).
 
