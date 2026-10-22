@@ -81,57 +81,60 @@ def test_alembic_migration_via_settings_env_var(
     real_db_existed_before = real_db.exists()
     real_db_mtime_before = real_db.stat().st_mtime if real_db_existed_before else None
 
-    # Set DATABASE_URL env var — this is the ONLY place we set the DB target
-    monkeypatch.setenv("DATABASE_URL", db_url)
+    engine = None
+    try:
+        # Set DATABASE_URL env var — this is the ONLY place we set the DB target
+        monkeypatch.setenv("DATABASE_URL", db_url)
 
-    alembic_ini_path = BACKEND_DIR / "alembic.ini"
-    alembic_cfg = Config(str(alembic_ini_path))
+        alembic_ini_path = BACKEND_DIR / "alembic.ini"
+        alembic_cfg = Config(str(alembic_ini_path))
 
-    # Assert that sqlalchemy.url is NOT set in the config (the key test precondition)
-    ini_url = alembic_cfg.get_main_option("sqlalchemy.url")
-    assert ini_url is None, (
-        f"Expected sqlalchemy.url to be absent from alembic.ini, but got: {ini_url!r}. "
-        "The test must exercise the Settings() fallback path in get_url()."
-    )
-
-    # Run the full lifecycle: upgrade, upgrade again, downgrade, upgrade
-    command.upgrade(alembic_cfg, "head")
-
-    engine = create_db_engine(db_url)
-    with engine.connect() as conn:
-        rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert rev is not None, "Expected a migration revision after upgrade head"
-
-    command.upgrade(alembic_cfg, "head")
-
-    with engine.connect() as conn:
-        rev_again = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert rev_again == rev
-
-    command.downgrade(alembic_cfg, "base")
-
-    with engine.connect() as conn:
-        base_rows = conn.execute(text("SELECT version_num FROM alembic_version")).fetchall()
-        assert len(base_rows) == 0
-
-    command.upgrade(alembic_cfg, "head")
-
-    with engine.connect() as conn:
-        rev_final = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert rev_final == rev
-
-    engine.dispose()
-
-    # Prove the real data/app.db was not created or modified during this test
-    real_db_exists_after = real_db.exists()
-    if not real_db_existed_before:
-        assert not real_db_exists_after, (
-            f"The real database at {real_db} was created during the test. "
-            "The test must only touch the tmp_path database."
+        # Assert that sqlalchemy.url is NOT set in the config (the key test precondition)
+        ini_url = alembic_cfg.get_main_option("sqlalchemy.url")
+        assert ini_url is None, (
+            f"Expected sqlalchemy.url to be absent from alembic.ini, but got: {ini_url!r}. "
+            "The test must exercise the Settings() fallback path in get_url()."
         )
-    else:
-        real_db_mtime_after = real_db.stat().st_mtime
-        assert real_db_mtime_after == real_db_mtime_before, (
-            f"The real database at {real_db} was modified during the test. "
-            f"mtime before: {real_db_mtime_before}, after: {real_db_mtime_after}"
-        )
+
+        # Run the full lifecycle: upgrade, upgrade again, downgrade, upgrade
+        command.upgrade(alembic_cfg, "head")
+
+        engine = create_db_engine(db_url)
+        with engine.connect() as conn:
+            rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            assert rev is not None, "Expected a migration revision after upgrade head"
+
+        command.upgrade(alembic_cfg, "head")
+
+        with engine.connect() as conn:
+            rev_again = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            assert rev_again == rev
+
+        command.downgrade(alembic_cfg, "base")
+
+        with engine.connect() as conn:
+            base_rows = conn.execute(text("SELECT version_num FROM alembic_version")).fetchall()
+            assert len(base_rows) == 0
+
+        command.upgrade(alembic_cfg, "head")
+
+        with engine.connect() as conn:
+            rev_final = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            assert rev_final == rev
+    finally:
+        if engine is not None:
+            engine.dispose()
+
+        # Prove the real data/app.db was not created or modified during this test
+        real_db_exists_after = real_db.exists()
+        if not real_db_existed_before:
+            assert not real_db_exists_after, (
+                f"The real database at {real_db} was created during the test. "
+                "The test must only touch the tmp_path database."
+            )
+        else:
+            real_db_mtime_after = real_db.stat().st_mtime
+            assert real_db_mtime_after == real_db_mtime_before, (
+                f"The real database at {real_db} was modified during the test. "
+                f"mtime before: {real_db_mtime_before}, after: {real_db_mtime_after}"
+            )
