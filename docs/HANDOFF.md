@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.4c done)
+Last updated by: Antigravity (T1.4e done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -26,16 +26,19 @@ Last updated by: Antigravity (T1.4c done)
 - T1.4a Root README: **done** — wrote `README.md` at repo root covering project description, requirements, backend/frontend setup (Windows PowerShell), health-check verification, checks commands, troubleshooting, project layout.
 - T1.4b Alembic usage note: **done** — verified `alembic -c alembic.ini current` from `backend\` and `backend\.venv\Scripts\alembic -c backend\alembic.ini current` from repo root; both succeed. Documented in README.
 - T1.4c Fresh-clone verification: **done** — cloned origin/t1-scaffold into a temporary directory outside repo and OneDrive ($env:TEMP\ri-fresh-clone-test); followed README step-by-step with no extra knowledge; venv creation, activation, pip install, alembic upgrade head, pytest (22 passed), ruff, mypy, npm ci, npm run lint, npm run type-check, and npm run build all verified passing; temporary clone deleted.
+- T1.4e Minor known items recorded: **done** — documented SQLite URL prefix edge case, custom creator URL options bypass, and unused ensure_data_dir in Known problems.
 
 ## In progress
-- T1.4e: Record minor known items in HANDOFF.md Known problems (docs only).
+None (T1.4 complete, stopped before merge per T1.4d).
 
 ## Next step
-- **T1.4e**: Record minor known items in HANDOFF.md Known problems (docs only).
-- **T1.4d**: Stop before merging; report and wait for architect review.
+Merge t1-scaffold into main after architect review, then T1.5.
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
+- session.py: is_sqlite uses startswith("sqlite") but folder creation uses startswith("sqlite:///"); a URL like sqlite+pysqlite:///path would break. Unused today.
+- The custom creator bypasses SQLAlchemy's SQLite connect handling, so URL options (timeout, uri) are ignored. Add a busy timeout if "database is locked" appears.
+- ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it at T2.
 - LLM provider not chosen (D-010).
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
 - Email verification / Google sign-in and hosting jurisdiction undecided (not needed until later).

@@ -27,12 +27,12 @@ Goal: empty skeleton, no product features.
   - [x] T1.3d-2 No side effects on import (data/ not created until first connection)
   - [x] T1.3d-3 Document batch-mode + foreign-keys migration risk in HANDOFF and DECISIONS_LOG
   - [x] T1.3d-4 Check docs commit history and set accurate next step
-- [ ] T1.4 README with exact run steps; verify from a fresh clone
+- [x] T1.4 README with exact run steps; verify from a fresh clone
   - [x] T1.4a Root README.md (project desc, requirements, backend/frontend setup, checks, troubleshooting, layout)
   - [x] T1.4b Alembic usage note (verified from backend/ and repo root; both succeed)
   - [x] T1.4c Fresh-clone verification (follow README only; fix if wrong)
-  - [ ] T1.4d Stop before merging (report and wait for architect review)
-  - [ ] T1.4e Record minor known items in HANDOFF.md Known problems
+  - [x] T1.4d Stop before merging (report and wait for architect review)
+  - [x] T1.4e Record minor known items in HANDOFF.md Known problems
 Acceptance: fresh clone runs from README; /health OK and shown in UI; migration applies cleanly; no secrets in repo; lint and type-check pass.
 
 ## T2 Auth and projects — todo
