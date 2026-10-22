@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.2e-1/2/3/4 done)
+Last updated by: Antigravity (T1.3-0 done)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -14,16 +14,19 @@ Last updated by: Antigravity (T1.2e-1/2/3/4 done)
 - T1.2e-2 No-wildcard enforcement: **done** — `Settings` now has a `field_validator` that raises `ValueError` at startup if `cors_origins` is empty or contains `*`. Tests: wildcard raises, wildcard-in-list raises, empty raises.
 - T1.2e-3 Narrow CORS: **done** — `allow_credentials=False`, `allow_methods=["GET", "OPTIONS"]`, `allow_headers=["Content-Type", "Authorization"]`. Comment in code: "T2 will revisit allow_methods and allow_headers when auth is designed."
 - T1.2e-4 next.config.ts explained: **done** — `cacheComponents` and `partialPrefetching` are both documented Next.js 15+/16+ features. Both were added by create-next-app during T1.2a scaffolding. Comments added in next.config.ts. Frontend checks: lint passed, tsc --noEmit passed, npm run build passed.
+- T1.3-0 Correct notes: **done** — replaced Docker/Postgres plan in TASKS.md, HANDOFF.md, and DECISIONS_LOG.md (D-004) with SQLite + Alembic as approved by owner on 2026-10-19.
 
 ## In progress
-- Nothing. T1.2e complete. Waiting for owner to approve T1.3.
+- T1.3a Database module (SQLAlchemy 2.x synchronous engine, session dependency, data/ folder, config, tests).
 
 ## Next step
-- **T1.3**: Docker Compose with Postgres + pgvector; Alembic with one empty migration. (Do not start until owner says so.)
+- **T1.3a**: Database module (add pinned SQLAlchemy 2.x, configure BACKEND_DIR/data/app.db SQLite URL, synchronous engine, session dependency, data/ auto-creation, tests).
+- **T1.3b**: FTS5 check (virtual table MATCH query test).
+- **T1.3c**: Alembic (alembic.ini without hardcoded URL, env.py reading settings, single empty initial migration, upgrade/downgrade test).
 
 ## Known problems / open questions
 - LLM provider not chosen (D-010).
-- Owner's computer specs (RAM / GPU) unknown, affects whether a local LLM is practical.
+- Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
 - Email verification / Google sign-in and hosting jurisdiction undecided (not needed until later).
 - `httpx` deprecation warning from `starlette.testclient` (harmless now; fix when upgrading starlette).
 

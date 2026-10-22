@@ -5,7 +5,7 @@ Format: ID — decision — reason — alternatives — status.
 D-001 — Monorepo: /frontend, /backend, /docs. Simple for a solo owner and one builder agent. Status: proposed.
 D-002 — Frontend: Next.js + TypeScript. Mature, good PDF viewer libraries. Alt: Vite + React. Status: proposed.
 D-003 — Backend: Python + FastAPI. Best PDF/AI tooling in Python. Alt: TypeScript backend. Status: proposed.
-D-004 — Database: PostgreSQL + pgvector, run locally in Docker. One system for relational data, vectors, and full-text search; free. Alt: Pinecone/Qdrant/Chroma. Status: proposed.
+D-004 — SQLite, approved by owner 2026-10-19. Reasons: 8 GB RAM laptop, no Docker, MVP scale of at most 20 papers per project, SQLite FTS5 covers keyword search, zero cost. All database access stays behind repositories/ using SQLAlchemy, so Postgres can be swapped in later if multi-user hosting needs it.
 D-005 — Auth: open-source library for email + password (e.g. FastAPI-Users), not hand-written. Status: proposed; confirm at T2.
 D-006 — File storage: local folder behind a storage interface. Free; swappable later. Status: proposed.
 D-007 — PDF parsing: PyMuPDF behind a parser interface. Gives page-level text with positions. NOTE: AGPL license; acceptable for a local portfolio build, must be revisited before any public launch. Status: proposed.
