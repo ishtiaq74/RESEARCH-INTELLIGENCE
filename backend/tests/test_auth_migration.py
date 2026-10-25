@@ -8,20 +8,23 @@ Verifies:
 """
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
+from alembic import command
 from app.config import BACKEND_DIR
 from app.db.session import create_db_engine
 
 
 @pytest.fixture()
-def migrated_engine(tmp_path: Path) -> object:  # type: ignore[return]
-    """Return an engine connected to a fresh DB migrated to head."""
+def migrated_engine(tmp_path: Path) -> Generator[Engine, None, None]:
+    """Yield an engine connected to a fresh DB migrated to head."""
     db_file = tmp_path / "migration_auth_test.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
@@ -34,32 +37,32 @@ def migrated_engine(tmp_path: Path) -> object:  # type: ignore[return]
     engine.dispose()
 
 
-def test_users_table_exists_after_upgrade(migrated_engine: object) -> None:
+def test_users_table_exists_after_upgrade(migrated_engine: Engine) -> None:
     """After upgrade head, the users table must exist."""
-    inspector = inspect(migrated_engine)  # type: ignore[arg-type]
+    inspector = inspect(migrated_engine)
     tables = inspector.get_table_names()
     assert "users" in tables, f"users table not found; tables={tables}"
 
 
-def test_sessions_table_exists_after_upgrade(migrated_engine: object) -> None:
+def test_sessions_table_exists_after_upgrade(migrated_engine: Engine) -> None:
     """After upgrade head, the sessions table must exist."""
-    inspector = inspect(migrated_engine)  # type: ignore[arg-type]
+    inspector = inspect(migrated_engine)
     tables = inspector.get_table_names()
     assert "sessions" in tables, f"sessions table not found; tables={tables}"
 
 
-def test_users_columns(migrated_engine: object) -> None:
+def test_users_columns(migrated_engine: Engine) -> None:
     """users table has the required columns."""
-    inspector = inspect(migrated_engine)  # type: ignore[arg-type]
+    inspector = inspect(migrated_engine)
     columns = {c["name"] for c in inspector.get_columns("users")}
     assert columns >= {"id", "email", "password_hash", "created_at"}, (
         f"Missing columns in users: {columns}"
     )
 
 
-def test_sessions_columns(migrated_engine: object) -> None:
+def test_sessions_columns(migrated_engine: Engine) -> None:
     """sessions table has the required columns."""
-    inspector = inspect(migrated_engine)  # type: ignore[arg-type]
+    inspector = inspect(migrated_engine)
     columns = {c["name"] for c in inspector.get_columns("sessions")}
     assert columns >= {"id", "user_id", "token_hash", "created_at", "expires_at"}, (
         f"Missing columns in sessions: {columns}"
@@ -127,15 +130,14 @@ def test_sessions_fk_enforced_after_migration(tmp_path: Path) -> None:
 
     engine = create_db_engine(db_url)
     try:
-        with engine.connect() as conn:
-            with pytest.raises(Exception):
-                # Insert a session row with a non-existent user_id
-                conn.execute(
-                    text(
-                        "INSERT INTO sessions (user_id, token_hash, created_at, expires_at) "
-                        "VALUES (9999, 'aabbcc', '2026-01-01', '2026-01-02')"
-                    )
+        with engine.connect() as conn, pytest.raises(IntegrityError):
+            # Insert a session row with a non-existent user_id
+            conn.execute(
+                text(
+                    "INSERT INTO sessions (user_id, token_hash, created_at, expires_at) "
+                    "VALUES (9999, 'aabbcc', '2026-01-01', '2026-01-02')"
                 )
-                conn.commit()
+            )
+            conn.commit()
     finally:
         engine.dispose()

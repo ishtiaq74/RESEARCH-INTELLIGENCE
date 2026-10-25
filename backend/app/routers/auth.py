@@ -70,9 +70,21 @@ class UserResponse(BaseModel):
 
 
 def _is_localhost(request: Request) -> bool:
-    """Return True if the request appears to come from localhost."""
+    """Return True if the request appears to come from localhost or a test client.
+
+    WHY testserver:
+      Starlette's TestClient sends requests with host='testserver'.  If we set
+      Secure=True in that context, httpx (the underlying HTTP client) silently
+      drops the cookie on subsequent plain-http requests, breaking all session-
+      dependent tests.  testserver is not a public internet host, so omitting
+      Secure is safe in this context.
+    """
     host = request.headers.get("host", "")
-    return host.startswith("localhost") or host.startswith("127.0.0.1")
+    return (
+        host.startswith("localhost")
+        or host.startswith("127.0.0.1")
+        or host == "testserver"
+    )
 
 
 def _set_session_cookie(response: Response, token: str, request: Request) -> None:

@@ -32,7 +32,7 @@ import secrets
 import threading
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import VerificationError, VerifyMismatchError
 from sqlalchemy.orm import Session
 
 from app import repositories
@@ -58,11 +58,13 @@ def hash_password(plaintext: str) -> str:
 def verify_password(password_hash: str, plaintext: str) -> bool:
     """Return True if plaintext matches the stored hash, False otherwise.
 
-    Uses constant-time comparison internally to prevent timing attacks.
+    Catches both VerifyMismatchError (valid hash, wrong password) and
+    VerificationError (malformed/dummy hash).  Both return False so the
+    caller never sees an exception from the hashing layer.
     """
     try:
         return _ph.verify(password_hash, plaintext)
-    except VerifyMismatchError:
+    except (VerifyMismatchError, VerificationError):
         return False
 
 
@@ -180,10 +182,20 @@ def login(db: Session, email: str, password: str) -> tuple[User, str]:
         )
 
     user = repositories.get_user_by_email(db, email)
-    # Always verify (even if user is None, to avoid timing attacks revealing
-    # whether the email is registered)
-    dummy_hash = "$argon2id$v=19$m=65536,t=3,p=4$dummy$dummy"
-    candidate_hash = user.password_hash if user is not None else dummy_hash
+    # Always call verify_password even when no user was found.
+    # WHY: if we returned early on missing user, the response time would be
+    # shorter than for an existing user with a wrong password.  An attacker
+    # could exploit that timing difference to enumerate valid emails.
+    # We use a pre-computed Argon2id hash of the literal string "dummy" as the
+    # stand-in hash.  verify_password will return False (VerifyMismatchError)
+    # after running the full Argon2id computation, giving the same wall-clock
+    # time as a real failed login.
+    _DUMMY_HASH = (
+        "$argon2id$v=19$m=65536,t=3,p=4"
+        "$ky0SzxAtck8hmECS8kDZCg"
+        "$npJVQPbLp1zNOAIdn8pg7tCztwxBx0IMqKCl7TLHW9U"
+    )
+    candidate_hash = user.password_hash if user is not None else _DUMMY_HASH
     ok = verify_password(candidate_hash, password)
 
     if user is None or not ok:

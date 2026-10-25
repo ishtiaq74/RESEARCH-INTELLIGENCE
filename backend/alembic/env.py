@@ -12,6 +12,7 @@ Changes from T1 scaffold:
 from __future__ import annotations
 
 from logging.config import fileConfig
+from typing import Any
 
 from alembic import context
 from app.config import Settings
@@ -39,7 +40,7 @@ def get_url() -> str:
     return Settings().database_url
 
 
-def _configure_context(connection: object, **kwargs: object) -> None:  # type: ignore[explicit-any]
+def _configure_context(connection: Any, **kwargs: Any) -> None:
     """Apply shared context.configure options.
 
     render_as_batch=True is essential for SQLite: Alembic emulates ALTER TABLE
@@ -47,14 +48,14 @@ def _configure_context(connection: object, **kwargs: object) -> None:  # type: i
     it, any ALTER (add column, add FK) would fail on SQLite.
     """
     context.configure(
-        connection=connection,  # type: ignore[arg-type]
+        connection=connection,
         target_metadata=target_metadata,
         render_as_batch=True,
-        **kwargs,  # type: ignore[arg-type]
+        **kwargs,
     )
 
 
-def _disable_fk_and_run(connection: object) -> None:  # type: ignore[explicit-any]
+def _disable_fk_and_run(connection: Any) -> None:
     """Disable FK enforcement, run migrations, check FK integrity, re-enable FKs.
 
     WHY:
@@ -69,18 +70,18 @@ def _disable_fk_and_run(connection: object) -> None:  # type: ignore[explicit-an
         4. PRAGMA foreign_keys=ON    — restore enforcement for normal operation
     """
     raw = getattr(connection, "connection", connection)  # unwrap SA connection → DBAPI
-    raw.execute("PRAGMA foreign_keys=OFF")  # type: ignore[union-attr]
+    raw.execute("PRAGMA foreign_keys=OFF")
     try:
         with context.begin_transaction():
             context.run_migrations()
         # Verify integrity after migration
-        violations = raw.execute("PRAGMA foreign_key_check").fetchall()  # type: ignore[union-attr]
+        violations = raw.execute("PRAGMA foreign_key_check").fetchall()
         if violations:
             raise RuntimeError(
                 f"Foreign key violations detected after migration: {violations}"
             )
     finally:
-        raw.execute("PRAGMA foreign_keys=ON")  # type: ignore[union-attr]
+        raw.execute("PRAGMA foreign_keys=ON")
 
 
 def run_migrations_offline() -> None:

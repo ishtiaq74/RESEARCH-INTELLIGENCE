@@ -43,6 +43,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    # FastAPI uses Depends(), Cookie(), etc. in function default arguments.
+    # This is the required pattern for FastAPI dependency injection; B008 is a false positive here.
+    "B008",
+]
 
 [tool.mypy]
 python_version = "3.12"

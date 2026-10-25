@@ -18,22 +18,20 @@ from __future__ import annotations
 import datetime
 import hashlib
 from collections.abc import Generator
-from unittest.mock import patch
+from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from alembic import command
 from app.config import BACKEND_DIR, Settings
-from app.db.session import create_db_engine, create_session_factory
+from app.db.session import create_db_engine, create_session_factory, get_db
 from app.main import create_app
 from app.models.user import Session as SessionModel
 from app.models.user import User
 from app.services.auth_service import reset_rate_limiter
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -49,7 +47,7 @@ def clear_rate_limiter() -> Generator[None, None, None]:
 
 
 @pytest.fixture()
-def db_and_client(tmp_path: pytest.TempPathFactory) -> Generator[  # type: ignore[type-arg]
+def db_and_client(tmp_path: Path) -> Generator[
     tuple[Session, TestClient], None, None
 ]:
     """Yield (db_session, test_client) backed by a fresh in-memory DB.
@@ -57,7 +55,7 @@ def db_and_client(tmp_path: pytest.TempPathFactory) -> Generator[  # type: ignor
     Uses a real SQLite file (not :memory:) so Alembic migrations work.
     Each test gets its own tmp_path so they are fully isolated.
     """
-    db_file = tmp_path / "test_auth.db"  # type: ignore[operator]
+    db_file = tmp_path / "test_auth.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
     # Apply migrations to get the real schema
@@ -68,7 +66,10 @@ def db_and_client(tmp_path: pytest.TempPathFactory) -> Generator[  # type: ignor
     engine = create_db_engine(db_url)
     factory = create_session_factory(engine)
 
-    # Override get_db to use our test engine
+    # Override get_db to use our test engine.
+    # WHY direct import as key: app.dependency_overrides is keyed by the exact
+    # function object.  We import get_db directly so the key is the same object
+    # that FastAPI registered when building the routes.
     def override_get_db() -> Generator[Session, None, None]:
         db = factory()
         try:
@@ -77,9 +78,7 @@ def db_and_client(tmp_path: pytest.TempPathFactory) -> Generator[  # type: ignor
             db.close()
 
     app = create_app(Settings(cors_origins="http://localhost:3000"))
-    app.dependency_overrides[__import__("app.db.session", fromlist=["get_db"]).get_db] = (
-        override_get_db
-    )
+    app.dependency_overrides[get_db] = override_get_db
 
     client = TestClient(app, raise_server_exceptions=True)
 
@@ -265,7 +264,12 @@ def test_token_stored_hashed(
     raw_token = response.cookies.get("session")
     assert raw_token is not None
 
-    session_row = db.query(SessionModel).first()
+    # register() creates a session internally (for immediate login after register).
+    # The subsequent explicit /auth/login call creates a second session.
+    # We want the session matching the cookie we received, i.e. the most recent one.
+    session_row = (
+        db.query(SessionModel).order_by(SessionModel.id.desc()).first()
+    )
     assert session_row is not None
 
     # token_hash must NOT be the raw token
