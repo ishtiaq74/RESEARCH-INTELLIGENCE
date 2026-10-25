@@ -8,7 +8,7 @@ Goal: continuity docs and GitHub remote exist.
 - [x] T0.2 Fresh session passes the resume test (states project state correctly from docs alone)
 Acceptance: files visible on GitHub; new session answers resume prompt correctly.
 
-## T1-SCAFFOLD — status: in-progress
+## T1-SCAFFOLD — status: done
 Goal: empty skeleton, no product features.
 - [x] T1.1 Backend skeleton: FastAPI, GET /health, env-based config, layered folders, one passing test
 - [x] T1.2 Frontend skeleton: Next.js + TypeScript page that calls /health
@@ -43,7 +43,15 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
   - [x] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
   - [x] T1.5f Correct DEPENDENCY_AUDIT.md (raw severities, owner upgrade note, braces *, prod claims, watch list)
 
-## T2 Auth and projects — todo
+## T2 Auth and projects — status: todo
+Goal: users can register, sign in and own private projects. No other user can see them.
+- [ ] T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies)
+- [ ] T2.2 Projects backend (projects table, owner scoping in the repositories layer, CRUD, cross-user isolation tests)
+- [ ] T2.3 Frontend: sign-in, sign-up, project list and create pages
+- [ ] T2.4 Security and isolation review
+- [ ] T2.5 README and HANDOFF update; stop before merge
+Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.
+
 ## T3 Secure PDF upload and storage — todo
 ## T4 Ingestion (page-level extraction, chunking, quality checks) — todo
 ## T5 Retrieval and evaluation set — todo
@@ -52,4 +60,4 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
 ## T8 Paper comparison — todo
 ## T9 Literature review drafting — todo
 
-(Detailed sub-steps for T2 onward will be added by the architect before each task starts.)
+(Detailed sub-steps for T3 onward will be added by the architect before each task starts.)

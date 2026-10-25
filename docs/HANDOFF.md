@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.5f done)
+Last updated by: Antigravity (T1 done, ready for T2.1)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -34,12 +34,14 @@ Last updated by: Antigravity (T1.5f done)
 - T1.5d ESLint assessment: **done** — verified npm view eslint dist-tags (maintenance: 9.39.5, latest: 10.13.0) and eslint-config-next@16.4.2 peerDependencies (eslint: >=9.0.0); saved to docs/audit-raw/eslint-versions.txt; peer dependency allows ESLint 10; lowest-risk upgrade path is deferring ESLint 10 to T2 to avoid major version churn during scaffold.
 - T1.5e Write docs/DEPENDENCY_AUDIT.md: **done** — created docs/DEPENDENCY_AUDIT.md summarizing frontend and backend audit findings, severity, scope, usage analysis, recommended actions, and fix risks.
 - T1.5f Correct DEPENDENCY_AUDIT.md: **done** — updated docs/DEPENDENCY_AUDIT.md to state raw severities ("not stated by pip-audit"), recorded owner local venv upgrade of pip (26.2.2) and certifi (2026.10.19) with 22 passing tests, updated braces to "braces *" without "<= 3.0.3" and "fixed version", saved npm-audit-prod.txt (0 vulnerabilities), clarified backend production scan scope (transitive inclusion unverified), and added Watch list section.
+- T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
+- T2 Auth and projects: **todo** — sub-steps T2.1 through T2.5 scoped in TASKS.md; decisions D-015–D-018 recorded in DECISIONS_LOG.md.
 
 ## In progress
-None (T1 complete, stopped before merge per instructions).
+None (T1 complete; ready to begin T2.1).
 
 ## Next step
-Owner reviews DEPENDENCY_AUDIT.md; then merge t1-5-audit and start T2 (auth and projects); architect writes the T2 task.
+T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies).
 
 ## Known problems / open questions
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
@@ -48,7 +50,7 @@ Owner reviews DEPENDENCY_AUDIT.md; then merge t1-5-audit and start T2 (auth and 
 - ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it at T2.
 - LLM provider not chosen (D-010).
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
-- Email verification / Google sign-in and hosting jurisdiction undecided (not needed until later).
+- Hosting jurisdiction undecided (not needed until deployment; email verification deferred for MVP per D-015; Google sign-in deferred in T2 per D-016).
 - `httpx` deprecation warning from `starlette.testclient` (harmless now; fix when upgrading starlette).
 
 ## How to run
