@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     database_url: str = DEFAULT_DATABASE_URL
 
     # CORS: comma-separated list of allowed origins. No wildcard allowed.
+    # T2: allow_credentials=True requires explicit origins (never wildcard).
+    # WHY CREDENTIALS REQUIRE EXPLICIT ORIGINS:
+    #   When allow_credentials=True, the browser checks Access-Control-Allow-Origin
+    #   and refuses to attach cookies/auth headers if the response value is "*".
+    #   Specifying explicit origins is both a browser requirement and a security
+    #   control — only listed origins may send credentialed cross-origin requests.
     cors_origins: str = "http://localhost:3000"
 
     @field_validator("cors_origins")

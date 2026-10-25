@@ -1,14 +1,26 @@
 """Tests for CORS behaviour.
 
-The CORSMiddleware only sets the `access-control-allow-origin` response header
-when the request carries an `Origin` header that matches the allow-list.
+T1.2e-2: wildcard and empty values raise ValueError at Settings construction time.
+T1.2e-3 (updated for T2): allow_credentials=True, methods now include POST and DELETE.
+
+T2 CORS change rationale (documented in app/main.py):
+  Session cookies require allow_credentials=True.  The browser will not send
+  cookies on cross-origin requests unless the server returns
+  Access-Control-Allow-Credentials: true.  This is only safe with explicit origins
+  (never wildcard), which the existing field_validator enforces.
 
 Tests:
-  - A wildcard value in Settings raises a ValueError at startup.
-  - An allowed origin gets its exact origin echoed back.
-  - A disallowed origin gets no access-control-allow-origin header.
-  - A preflight (OPTIONS) request from an allowed origin succeeds.
-  - A preflight (OPTIONS) request from a disallowed origin gets no allow header.
+  - Wildcard origin raises ValueError.
+  - Wildcard-in-list raises ValueError.
+  - Empty string raises ValueError (covers the no-wildcard validator).
+  - Allowed origin receives its exact origin echoed back.
+  - Disallowed origin receives no Access-Control-Allow-Origin header.
+  - The wildcard '*' is never returned.
+  - Allowed origin receives Access-Control-Allow-Credentials: true (T2 new).
+  - POST preflight from an allowed origin succeeds (T2 new).
+  - POST preflight from a disallowed origin gets no allow header (T2 new).
+  - GET preflight from an allowed origin succeeds.
+  - GET preflight from a disallowed origin gets no allow header.
 """
 from __future__ import annotations
 
@@ -33,19 +45,19 @@ def _client(cors_origins: str) -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# T1.2e-2: Validation tests
+# T1.2e-2: Validation tests (unchanged from T1)
 # ---------------------------------------------------------------------------
 
 
 def test_wildcard_origin_raises() -> None:
     """Settings must reject '*' as a CORS origin."""
-    with pytest.raises(Exception, match=r"wildcard|\\*"):
+    with pytest.raises(Exception, match=r"wildcard|\*"):
         Settings(cors_origins="*")
 
 
 def test_wildcard_in_list_raises() -> None:
     """Settings must reject '*' even when mixed with valid origins."""
-    with pytest.raises(Exception, match=r"wildcard|\\*"):
+    with pytest.raises(Exception, match=r"wildcard|\*"):
         Settings(cors_origins="http://localhost:3000,*")
 
 
@@ -56,7 +68,7 @@ def test_empty_cors_origins_raises() -> None:
 
 
 # ---------------------------------------------------------------------------
-# T1.2e-2 & T1.2e-3: Runtime CORS header tests
+# Runtime CORS header tests
 # ---------------------------------------------------------------------------
 
 
@@ -88,6 +100,28 @@ def test_wildcard_never_returned() -> None:
     assert acao != "*", "CORS must not return wildcard '*'"
 
 
+def test_allowed_origin_gets_credentials_header() -> None:
+    """T2: allowed origin must receive Access-Control-Allow-Credentials: true.
+
+    WHY THIS MATTERS:
+      allow_credentials=True makes the server include the ACAC header.
+      Without it the browser strips cookies from the cross-origin response and
+      will not attach them on the next request — sessions would break entirely
+      for the frontend on a different port (localhost:3000 vs :8000).
+    """
+    client = _client(ALLOWED)
+    response = client.get("/health", headers={"Origin": ALLOWED})
+    acac = response.headers.get("access-control-allow-credentials")
+    assert acac == "true", (
+        f"Expected Access-Control-Allow-Credentials: true, got: {acac!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Preflight (OPTIONS) tests — GET method (T1 behaviour preserved)
+# ---------------------------------------------------------------------------
+
+
 def test_preflight_allowed_origin_succeeds() -> None:
     """OPTIONS preflight from an allowed origin must return 200."""
     client = _client(ALLOWED)
@@ -116,4 +150,45 @@ def test_preflight_disallowed_origin_gets_no_allow_header() -> None:
     acao = response.headers.get("access-control-allow-origin")
     assert acao is None or acao != DISALLOWED, (
         f"Preflight for disallowed origin should not return allow header, got: {acao!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Preflight (OPTIONS) tests — POST method (T2 new: auth endpoints use POST)
+# ---------------------------------------------------------------------------
+
+
+def test_post_preflight_allowed_origin_succeeds() -> None:
+    """T2: OPTIONS preflight for POST from an allowed origin must succeed.
+
+    The auth endpoints (register, login, logout) use POST.  Without POST in
+    allow_methods the browser's preflight would fail and the auth calls would
+    be blocked entirely.
+    """
+    client = _client(ALLOWED)
+    response = client.options(
+        "/auth/login",
+        headers={
+            "Origin": ALLOWED,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == 200
+    acao = response.headers.get("access-control-allow-origin")
+    assert acao == ALLOWED, f"POST preflight allowed origin expected '{ALLOWED}', got: {acao!r}"
+
+
+def test_post_preflight_disallowed_origin_gets_no_allow_header() -> None:
+    """T2: OPTIONS preflight for POST from a disallowed origin must not be allowed."""
+    client = _client(ALLOWED)
+    response = client.options(
+        "/auth/login",
+        headers={
+            "Origin": DISALLOWED,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    acao = response.headers.get("access-control-allow-origin")
+    assert acao is None or acao != DISALLOWED, (
+        f"POST preflight for disallowed origin should not return allow header, got: {acao!r}"
     )
