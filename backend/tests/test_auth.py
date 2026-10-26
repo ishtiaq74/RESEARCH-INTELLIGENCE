@@ -368,16 +368,13 @@ def test_me_returns_401_without_cookie(
 def test_expired_session_returns_401(
     db_and_client: tuple[Session, TestClient],
 ) -> None:
-    """GET /auth/me returns 401 when the session has expired.
-
-    We set the session's expires_at to the past directly in the DB to simulate
-    expiry without sleeping.
-    """
+    """GET /auth/me returns 401 when the session has expired, and deletes the row."""
     db, client = db_and_client
     client.post("/auth/register", json={"email": "kate@example.com", "password": "password123"})
 
     # Confirm authenticated
     assert client.get("/auth/me").status_code == 200
+    assert db.query(SessionModel).count() == 1
 
     # Expire the session by setting expires_at in the past
     past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
@@ -386,6 +383,8 @@ def test_expired_session_returns_401(
 
     response = client.get("/auth/me")
     assert response.status_code == 401, "Expired session must return 401"
+    # Row must be deleted by get_current_user upon detecting expiry
+    assert db.query(SessionModel).count() == 0, "Expired session row must be deleted from DB"
 
 
 # ---------------------------------------------------------------------------

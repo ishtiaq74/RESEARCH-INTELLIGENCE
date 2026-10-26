@@ -254,6 +254,7 @@ def get_current_user(db: Session, token: str | None) -> User | None:
         expires = expires.replace(tzinfo=datetime.UTC)
 
     if now > expires:
+        repositories.delete_session_by_token(db, token)
         return None
 
     return repositories.get_user_by_id(db, session.user_id)
