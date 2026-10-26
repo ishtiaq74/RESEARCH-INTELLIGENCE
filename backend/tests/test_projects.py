@@ -649,6 +649,31 @@ def test_get_project_not_found(
 
     response = client.get("/projects/9999")
     assert response.status_code == 404
+    assert response.json() == {"detail": "Project not found."}
+
+
+def test_patch_project_not_found(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """PATCH /projects/9999 returns 404 for a non-existent id."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.patch("/projects/9999", json={"name": "Renamed"})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Project not found."}
+
+
+def test_delete_project_not_found(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """DELETE /projects/9999 returns 404 for a non-existent id."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.delete("/projects/9999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Project not found."}
 
 
 def test_update_project_success(
@@ -662,6 +687,37 @@ def test_update_project_success(
     response = client.patch(f"/projects/{created['id']}", json={"name": "New Name"})
     assert response.status_code == 200, response.text
     assert response.json()["name"] == "New Name"
+
+
+def test_patch_project_whitespace_only_name_returns_422(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """PATCH /projects/{id} with whitespace-only name returns 422."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    created = client.post("/projects", json={"name": "Original Name"}).json()
+    response = client.patch(f"/projects/{created['id']}", json={"name": "    \t  \n  "})
+    assert response.status_code == 422
+
+
+def test_patch_project_name_100_accepted_101_rejected(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """PATCH /projects/{id} accepts 100 chars and rejects 101 chars."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    created = client.post("/projects", json={"name": "Original"}).json()
+
+    # 100 characters accepted
+    r100 = client.patch(f"/projects/{created['id']}", json={"name": "x" * 100})
+    assert r100.status_code == 200, r100.text
+    assert r100.json()["name"] == "x" * 100
+
+    # 101 characters rejected
+    r101 = client.patch(f"/projects/{created['id']}", json={"name": "x" * 101})
+    assert r101.status_code == 422
 
 
 def test_delete_project_success(
@@ -723,7 +779,7 @@ def test_get_other_users_project_returns_404(
 ) -> None:
     """GET /projects/{id} for a project owned by another user returns 404.
 
-    Returns 404 (not 403) to avoid revealing the project exists at all.
+    The response body is identical to requesting a non-existent project id.
     """
     db, client = db_and_client
 
@@ -734,16 +790,22 @@ def test_get_other_users_project_returns_404(
 
     # Bob tries to access it
     _register_and_login(client, "bob@example.com")
-    response = client.get(f"/projects/{alice_project['id']}")
-    assert response.status_code == 404, (
-        f"Expected 404 for cross-user GET, got {response.status_code}: {response.text}"
-    )
+    cross_resp = client.get(f"/projects/{alice_project['id']}")
+    nonexistent_resp = client.get("/projects/999999")
+
+    assert cross_resp.status_code == 404
+    assert nonexistent_resp.status_code == 404
+    assert cross_resp.json() == nonexistent_resp.json()
+    assert cross_resp.json() == {"detail": "Project not found."}
 
 
 def test_patch_other_users_project_returns_404(
     db_and_client: tuple[Session, TestClient],
 ) -> None:
-    """PATCH /projects/{id} for a project owned by another user returns 404."""
+    """PATCH /projects/{id} for a project owned by another user returns 404.
+
+    The response body is identical to requesting a non-existent project id.
+    """
     db, client = db_and_client
 
     _register_and_login(client, "alice@example.com")
@@ -751,12 +813,17 @@ def test_patch_other_users_project_returns_404(
     client.post("/auth/logout")
 
     _register_and_login(client, "bob@example.com")
-    response = client.patch(
+    cross_resp = client.patch(
         f"/projects/{alice_project['id']}", json={"name": "Bob Hijacked"}
     )
-    assert response.status_code == 404, (
-        f"Expected 404 for cross-user PATCH, got {response.status_code}: {response.text}"
+    nonexistent_resp = client.patch(
+        "/projects/999999", json={"name": "Bob Hijacked"}
     )
+
+    assert cross_resp.status_code == 404
+    assert nonexistent_resp.status_code == 404
+    assert cross_resp.json() == nonexistent_resp.json()
+    assert cross_resp.json() == {"detail": "Project not found."}
 
     # Confirm Alice's project is unchanged
     client.post("/auth/logout")
@@ -768,7 +835,10 @@ def test_patch_other_users_project_returns_404(
 def test_delete_other_users_project_returns_404(
     db_and_client: tuple[Session, TestClient],
 ) -> None:
-    """DELETE /projects/{id} for a project owned by another user returns 404."""
+    """DELETE /projects/{id} for a project owned by another user returns 404.
+
+    The response body is identical to requesting a non-existent project id.
+    """
     db, client = db_and_client
 
     _register_and_login(client, "alice@example.com")
@@ -776,10 +846,13 @@ def test_delete_other_users_project_returns_404(
     client.post("/auth/logout")
 
     _register_and_login(client, "bob@example.com")
-    response = client.delete(f"/projects/{alice_project['id']}")
-    assert response.status_code == 404, (
-        f"Expected 404 for cross-user DELETE, got {response.status_code}: {response.text}"
-    )
+    cross_resp = client.delete(f"/projects/{alice_project['id']}")
+    nonexistent_resp = client.delete("/projects/999999")
+
+    assert cross_resp.status_code == 404
+    assert nonexistent_resp.status_code == 404
+    assert cross_resp.json() == nonexistent_resp.json()
+    assert cross_resp.json() == {"detail": "Project not found."}
 
     # Confirm Alice's project still exists
     client.post("/auth/logout")
