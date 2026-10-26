@@ -422,15 +422,90 @@ def test_create_project_empty_name_returns_422(
     assert response.status_code == 422
 
 
-def test_create_project_name_too_long_returns_422(
+def test_create_project_whitespace_only_name_returns_422(
     db_and_client: tuple[Session, TestClient],
 ) -> None:
-    """POST /projects with a name exceeding 200 characters returns 422."""
+    """POST /projects with whitespace-only name returns 422."""
     _, client = db_and_client
     _register_and_login(client, "alice@example.com")
 
-    response = client.post("/projects", json={"name": "x" * 201})
+    response = client.post("/projects", json={"name": "    \t  \n  "})
     assert response.status_code == 422
+
+
+def test_create_project_name_strips_surrounding_whitespace(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """POST /projects strips leading/trailing whitespace before storing."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.post("/projects", json={"name": "   Trimmed Project   "})
+    assert response.status_code == 201, response.text
+    assert response.json()["name"] == "Trimmed Project"
+
+
+def test_create_project_name_exactly_100_chars_accepted(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """POST /projects with a name of exactly 100 characters is accepted (201)."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    name_100 = "a" * 100
+    response = client.post("/projects", json={"name": name_100})
+    assert response.status_code == 201, response.text
+    assert response.json()["name"] == name_100
+
+
+def test_create_project_name_101_chars_rejected(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """POST /projects with a name of 101 characters returns 422."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    name_101 = "a" * 101
+    response = client.post("/projects", json={"name": name_101})
+    assert response.status_code == 422
+
+
+def test_pydantic_schema_strips_before_length_check() -> None:
+    """Verify Pydantic strips whitespace before validating min_length."""
+    from pydantic import ValidationError
+
+    from app.routers.projects import CreateProjectRequest, UpdateProjectRequest
+
+    # Whitespace-only should fail min_length=1
+    with pytest.raises(ValidationError):
+        CreateProjectRequest(name="   ")
+
+    with pytest.raises(ValidationError):
+        UpdateProjectRequest(name="   ")
+
+    # 100 chars with surrounding whitespace strips to 100 and passes
+    req = CreateProjectRequest(name="  " + ("x" * 100) + "  ")
+    assert len(req.name) == 100
+
+    # 101 chars fails max_length=100
+    with pytest.raises(ValidationError):
+        CreateProjectRequest(name="x" * 101)
+
+
+def test_project_service_name_validation() -> None:
+    """Verify service-level _validate_project_name enforces stripping and length rules."""
+    from app.services.project_service import ProjectError, _validate_project_name
+
+    assert _validate_project_name("  valid name  ") == "valid name"
+    assert len(_validate_project_name("x" * 100)) == 100
+
+    with pytest.raises(ProjectError) as exc_empty:
+        _validate_project_name("   ")
+    assert exc_empty.value.status_code == 422
+
+    with pytest.raises(ProjectError) as exc_long:
+        _validate_project_name("x" * 101)
+    assert exc_long.value.status_code == 422
 
 
 def test_list_projects_empty(

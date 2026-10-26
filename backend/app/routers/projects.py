@@ -20,7 +20,7 @@ WHY 404 INSTEAD OF 403 FOR CROSS-USER ACCESS:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -37,11 +37,15 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 class CreateProjectRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=1, max_length=100)
 
 
 class UpdateProjectRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=1, max_length=100)
 
 
 class ProjectResponse(BaseModel):

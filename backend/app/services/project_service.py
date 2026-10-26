@@ -22,6 +22,9 @@ from sqlalchemy.orm import Session
 from app.models.project import Project
 from app.repositories import project_repository
 
+_MIN_PROJECT_NAME_LENGTH: int = 1
+_MAX_PROJECT_NAME_LENGTH: int = 100
+
 
 class ProjectError(Exception):
     """Raised for project business logic failures that should map to HTTP 4xx."""
@@ -42,9 +45,27 @@ class ProjectNotFoundError(ProjectError):
         super().__init__(message, status_code=404)
 
 
+def _validate_project_name(name: str) -> str:
+    """Validate and normalize a project name.
+
+    Strips leading/trailing whitespace, then enforces 1 to 100 characters.
+    Raises ProjectError(status_code=422) if empty or exceeding 100 characters.
+    """
+    stripped = name.strip()
+    if len(stripped) < _MIN_PROJECT_NAME_LENGTH:
+        raise ProjectError("Project name must not be empty.", status_code=422)
+    if len(stripped) > _MAX_PROJECT_NAME_LENGTH:
+        raise ProjectError(
+            f"Project name must be at most {_MAX_PROJECT_NAME_LENGTH} characters.",
+            status_code=422,
+        )
+    return stripped
+
+
 def create_project(db: Session, owner_id: int, name: str) -> Project:
     """Create a new project owned by owner_id."""
-    return project_repository.create_project(db, owner_id=owner_id, name=name)
+    clean_name = _validate_project_name(name)
+    return project_repository.create_project(db, owner_id=owner_id, name=clean_name)
 
 
 def list_projects(db: Session, owner_id: int) -> list[Project]:
@@ -71,9 +92,11 @@ def update_project(
     """Rename a project owned by owner_id.
 
     Raises ProjectNotFoundError if the project does not exist or is not owned by owner_id.
+    Raises ProjectError(status_code=422) if the name is invalid.
     """
+    clean_name = _validate_project_name(name)
     project = project_repository.update_project(
-        db, owner_id=owner_id, project_id=project_id, name=name
+        db, owner_id=owner_id, project_id=project_id, name=clean_name
     )
     if project is None:
         raise ProjectNotFoundError("Project not found.")
