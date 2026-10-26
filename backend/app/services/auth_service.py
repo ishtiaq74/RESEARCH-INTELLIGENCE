@@ -125,12 +125,15 @@ def reset_rate_limiter() -> None:
 # ---------------------------------------------------------------------------
 
 _MIN_PASSWORD_LENGTH: int = 8
+_MAX_PASSWORD_LENGTH: int = 128
 
 
 def _validate_password(password: str) -> str | None:
-    """Return an error message if password is too weak, or None if acceptable."""
+    """Return an error message if password is too weak or too long, or None if acceptable."""
     if len(password) < _MIN_PASSWORD_LENGTH:
         return f"Password must be at least {_MIN_PASSWORD_LENGTH} characters."
+    if len(password) > _MAX_PASSWORD_LENGTH:
+        return f"Password must be at most {_MAX_PASSWORD_LENGTH} characters."
     return None
 
 

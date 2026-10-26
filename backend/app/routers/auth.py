@@ -23,7 +23,7 @@ Secure:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.config import Settings, settings
@@ -31,6 +31,7 @@ from app.db.session import get_db
 from app.dependencies import SESSION_COOKIE_NAME, require_current_user
 from app.models.user import User
 from app.services.auth_service import (
+    _MAX_PASSWORD_LENGTH,
     AuthError,
     login,
     logout,
@@ -50,7 +51,7 @@ _SESSION_MAX_AGE_SECONDS = 24 * 60 * 60  # 24 hours, matches auth_service
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=_MAX_PASSWORD_LENGTH)
 
     @field_validator("password")
     @classmethod
@@ -62,7 +63,7 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=_MAX_PASSWORD_LENGTH)
 
 
 class UserResponse(BaseModel):

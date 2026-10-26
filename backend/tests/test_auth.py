@@ -538,3 +538,44 @@ def test_register_duplicate_email_race_condition_returns_409(
     res2 = client.post("/auth/register", json=payload)
     assert res2.status_code == 409, f"Expected 409, got {res2.status_code}: {res2.text}"
     assert "already registered" in res2.json().get("detail", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# Password length tests (T2.1 Step 5)
+# ---------------------------------------------------------------------------
+
+
+def test_register_password_length_boundary(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Register accepts 128-char password and rejects 129-char with 422."""
+    db, client = db_and_client
+
+    # 128 characters accepted
+    pw_128 = "A" * 128
+    res_128 = client.post(
+        "/auth/register",
+        json={"email": "pw128@example.com", "password": pw_128},
+    )
+    assert res_128.status_code == 201
+
+    # 129 characters rejected with 422
+    pw_129 = "A" * 129
+    res_129 = client.post(
+        "/auth/register",
+        json={"email": "pw129@example.com", "password": pw_129},
+    )
+    assert res_129.status_code == 422
+
+
+def test_login_overlength_password_returns_422(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Over-length password on login returns 422 Unprocessable Entity."""
+    db, client = db_and_client
+    pw_129 = "A" * 129
+    res = client.post(
+        "/auth/login",
+        json={"email": "user@example.com", "password": pw_129},
+    )
+    assert res.status_code == 422
