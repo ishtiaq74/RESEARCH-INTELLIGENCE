@@ -36,21 +36,24 @@ Last updated by: Antigravity (T1 done, ready for T2.1)
 - T1.5f Correct DEPENDENCY_AUDIT.md: **done** — updated docs/DEPENDENCY_AUDIT.md to state raw severities ("not stated by pip-audit"), recorded owner local venv upgrade of pip (26.2.2) and certifi (2026.10.19) with 22 passing tests, updated braces to "braces *" without "<= 3.0.3" and "fixed version", saved npm-audit-prod.txt (0 vulnerabilities), clarified backend production scan scope (transitive inclusion unverified), and added Watch list section.
 - T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
 - T2.1 Backend auth: **done** — email + password auth, server-side sessions in SQLite, Alembic migration with foreign keys and batch mode, CORS credentials enabled with explicit origins, Argon2id hashing, in-process rate limiting, and all security fixes completed (SESSION_COOKIE_SECURE setting, dummy hash constant, start_session split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset). 55 backend tests passing, ruff and mypy clean.
+- T2.2 Projects backend: **done** — projects table with owner_id FK (CASCADE), index, timestamps; project_repository scoping every query by owner_id and id; project_service layer enforcing ownership, name rules (strip whitespace, 1-100 chars), and raising identical ProjectNotFoundError (404) for missing and cross-user projects; router calling only service; pagination (limit 50 default, max 100 via Query le=100 returning 422, offset >= 0, id ascending); ProjectResponse using real datetime fields with model_validate (from_orm_model and all type: ignore removed); CORS updated to remove expose_headers=["set-cookie"] per WHATWG Fetch standard; dynamic ScriptDirectory head/parent lookups in migration tests; 99 passing tests, ruff and mypy clean.
 
 ## In progress
-None (T2.1 complete; stopped before merge).
+None (T2.2 complete; stopped before merge).
 
 ## Next step
-Review T2.1 and merge branch `t2-auth` into `main`, then proceed to T2.2 Projects backend.
+Review T2.2 and merge branch `t2-auth` into `main`, then proceed to T2.3 Frontend (sign-in, sign-up, project list and create pages).
 
 ## Known problems / open questions
 - Duplicate-email 409 reveals registered emails: Returning 409 Conflict on registration with an existing email allows account enumeration via signup probing.
 - Rate limiter is in-process, keyed by email only, stored in an unbounded in-memory dictionary, and can be used to lock out a victim: An attacker submitting repeated wrong passwords for a known user email will trigger a lockout for that victim; the in-memory dictionary grows with unique email attempts until server restart.
 - Deployment requires frontend and API on the same site for SameSite=Lax cookies: Browsers do not attach SameSite=Lax cookies on cross-site asynchronous requests (fetch/XHR), requiring frontend and backend to share the same registrable domain (e.g. `app.example.com` and `api.example.com`).
-- When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
+- Project DELETE removes only the database row: DELETE /projects/{id} removes only the project row in SQLite. Downstream artifacts (stored PDF files on disk in T3, chunks and vector embeddings in T4) will not be cascade-deleted by the database; T3 and T4 must implement explicit file and vector cleanup when a project is deleted.
+- Integer IDs are guessable: Sequential integer primary keys can be traversed/probed. This is acceptable because all queries strictly scope by owner_id in the data layer and return an identical 404 for missing and non-owned projects, preventing data leaks or existence probing.
+- When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py if table alteration occurs: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward.
 - session.py: is_sqlite uses startswith("sqlite") but folder creation uses startswith("sqlite:///"); a URL like sqlite+pysqlite:///path would break. Unused today.
 - The custom creator bypasses SQLAlchemy's SQLite connect handling, so URL options (timeout, uri) are ignored. Add a busy timeout if "database is locked" appears.
-- ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it at T2.
+- ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it when file upload is implemented in T3.
 - LLM provider not chosen (D-010).
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
 - Hosting jurisdiction undecided (not needed until deployment; email verification deferred for MVP per D-015; Google sign-in deferred in T2 per D-016).

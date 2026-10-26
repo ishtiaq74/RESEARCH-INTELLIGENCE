@@ -51,7 +51,14 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.1c Service layer (Argon2id password hashing, in-process rate limiter, session management)
   - [x] T2.1d Auth router (/register, /login, /logout, /me) with httpOnly, SameSite=Lax cookie
   - [x] T2.1e Security fixes (SESSION_COOKIE_SECURE config, dummy hash module constant, session creation split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset)
-- [ ] T2.2 Projects backend (projects table, owner scoping in the repositories layer, CRUD, cross-user isolation tests)
+- [x] T2.2 Projects backend (projects table, owner scoping in the repositories layer, CRUD, cross-user isolation tests)
+  - [x] T2.2a Projects schema & Alembic migration (projects table, owner_id FK with CASCADE, created_at, updated_at, index on owner_id)
+  - [x] T2.2b Dynamic migration tests (compute head with ScriptDirectory, inspect down_revision for projects migration parent)
+  - [x] T2.2c Repositories layer (project_repository scoping every query by owner_id and id, with pagination limit/offset)
+  - [x] T2.2d Service layer (project_service with ProjectError, ProjectNotFoundError, name validation, and strict owner propagation)
+  - [x] T2.2e Projects router & schemas (ConfigDict str_strip_whitespace=True, 1-100 char name limit, pagination limit/offset, real datetime fields in ProjectResponse with model_validate, no type: ignore)
+  - [x] T2.2f CORS cleanup (removed expose_headers=["set-cookie"] per WHATWG Fetch spec, added PATCH preflight)
+  - [x] T2.2g Comprehensive test suite (99 passing backend tests: CRUD happy paths, unauthenticated 401s, 422 on whitespace-only/length violations, 404 on missing and not-owned, identical response bodies for cross-user and missing ids, pagination slicing and 100 cap)
 - [ ] T2.3 Frontend: sign-in, sign-up, project list and create pages
 - [ ] T2.4 Security and isolation review
 - [ ] T2.5 README and HANDOFF update; stop before merge
