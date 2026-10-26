@@ -68,9 +68,20 @@ def create_project(db: Session, owner_id: int, name: str) -> Project:
     return project_repository.create_project(db, owner_id=owner_id, name=clean_name)
 
 
-def list_projects(db: Session, owner_id: int) -> list[Project]:
-    """Return all projects owned by owner_id."""
-    return project_repository.list_projects(db, owner_id=owner_id)
+def list_projects(
+    db: Session,
+    owner_id: int,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Project]:
+    """Return projects owned by owner_id with pagination."""
+    if limit < 1 or limit > 100:
+        raise ProjectError("Limit must be between 1 and 100.", status_code=422)
+    if offset < 0:
+        raise ProjectError("Offset must be non-negative.", status_code=422)
+    return project_repository.list_projects(
+        db, owner_id=owner_id, limit=limit, offset=offset
+    )
 
 
 def get_project(db: Session, owner_id: int, project_id: int) -> Project:

@@ -537,6 +537,96 @@ def test_list_projects_multiple(
     assert names == ["Alpha", "Beta", "Gamma"]
 
 
+def test_list_projects_pagination_limit_and_offset(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """GET /projects respects limit and offset, ordered by id ascending."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    for i in range(1, 6):
+        client.post("/projects", json={"name": f"Project {i}"})
+
+    # Page 1: limit 2, offset 0 -> Project 1, Project 2
+    r1 = client.get("/projects?limit=2&offset=0")
+    assert r1.status_code == 200, r1.text
+    data1 = r1.json()
+    assert len(data1) == 2
+    assert [p["name"] for p in data1] == ["Project 1", "Project 2"]
+    # Verify id ordering
+    assert data1[0]["id"] < data1[1]["id"]
+
+    # Page 2: limit 2, offset 2 -> Project 3, Project 4
+    r2 = client.get("/projects?limit=2&offset=2")
+    assert r2.status_code == 200, r2.text
+    data2 = r2.json()
+    assert len(data2) == 2
+    assert [p["name"] for p in data2] == ["Project 3", "Project 4"]
+
+    # Page 3: limit 2, offset 4 -> Project 5
+    r3 = client.get("/projects?limit=2&offset=4")
+    assert r3.status_code == 200, r3.text
+    data3 = r3.json()
+    assert len(data3) == 1
+    assert [p["name"] for p in data3] == ["Project 5"]
+
+    # Offset beyond available rows returns empty list
+    r4 = client.get("/projects?limit=2&offset=10")
+    assert r4.status_code == 200, r4.text
+    assert r4.json() == []
+
+
+def test_list_projects_limit_cap_100(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """GET /projects with limit > 100 returns 422."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.get("/projects?limit=101")
+    assert response.status_code == 422
+
+
+def test_list_projects_negative_offset_returns_422(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """GET /projects with negative offset returns 422."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.get("/projects?offset=-1")
+    assert response.status_code == 422
+
+
+def test_list_projects_limit_zero_returns_422(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """GET /projects with limit=0 returns 422."""
+    _, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+
+    response = client.get("/projects?limit=0")
+    assert response.status_code == 422
+
+
+def test_repository_list_projects_pagination(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Verify project_repository.list_projects pagination parameters directly."""
+    db, _ = db_and_client
+    from app.repositories.user_repository import create_user
+    from app.services.auth_service import hash_password
+
+    user = create_user(db, "repo_page@example.com", hash_password("pass1234"))
+    for i in range(1, 6):
+        create_project(db, owner_id=user.id, name=f"Repo Project {i}")
+
+    paged = list_projects(db, owner_id=user.id, limit=2, offset=1)
+    assert len(paged) == 2
+    assert paged[0].name == "Repo Project 2"
+    assert paged[1].name == "Repo Project 3"
+
+
 def test_get_project_success(
     db_and_client: tuple[Session, TestClient],
 ) -> None:

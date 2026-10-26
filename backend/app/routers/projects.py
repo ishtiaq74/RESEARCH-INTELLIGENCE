@@ -19,7 +19,7 @@ WHY 404 INSTEAD OF 403 FOR CROSS-USER ACCESS:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -99,11 +99,18 @@ def create(
 
 @router.get("", response_model=list[ProjectResponse])
 def list_all(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ) -> list[ProjectResponse]:
-    """Return all projects owned by the current user (ordered by id)."""
-    projects = project_service.list_projects(db, owner_id=current_user.id)
+    """Return all projects owned by the current user (ordered by id ascending)."""
+    try:
+        projects = project_service.list_projects(
+            db, owner_id=current_user.id, limit=limit, offset=offset
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return [ProjectResponse.from_orm_model(p) for p in projects]
 
 

@@ -43,12 +43,19 @@ def create_project(db: Session, owner_id: int, name: str) -> Project:
     return project
 
 
-def list_projects(db: Session, owner_id: int) -> list[Project]:
-    """Return all projects owned by owner_id, ordered by id ascending."""
+def list_projects(
+    db: Session,
+    owner_id: int,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Project]:
+    """Return projects owned by owner_id, ordered by id ascending with pagination."""
     return (
         db.query(Project)
         .filter(Project.owner_id == owner_id)
-        .order_by(Project.id)
+        .order_by(Project.id.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
