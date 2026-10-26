@@ -35,15 +35,18 @@ Last updated by: Antigravity (T1 done, ready for T2.1)
 - T1.5e Write docs/DEPENDENCY_AUDIT.md: **done** — created docs/DEPENDENCY_AUDIT.md summarizing frontend and backend audit findings, severity, scope, usage analysis, recommended actions, and fix risks.
 - T1.5f Correct DEPENDENCY_AUDIT.md: **done** — updated docs/DEPENDENCY_AUDIT.md to state raw severities ("not stated by pip-audit"), recorded owner local venv upgrade of pip (26.2.2) and certifi (2026.10.19) with 22 passing tests, updated braces to "braces *" without "<= 3.0.3" and "fixed version", saved npm-audit-prod.txt (0 vulnerabilities), clarified backend production scan scope (transitive inclusion unverified), and added Watch list section.
 - T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
-- T2 Auth and projects: **todo** — sub-steps T2.1 through T2.5 scoped in TASKS.md; decisions D-015–D-018 recorded in DECISIONS_LOG.md.
+- T2.1 Backend auth: **done** — email + password auth, server-side sessions in SQLite, Alembic migration with foreign keys and batch mode, CORS credentials enabled with explicit origins, Argon2id hashing, in-process rate limiting, and all security fixes completed (SESSION_COOKIE_SECURE setting, dummy hash constant, start_session split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset). 55 backend tests passing, ruff and mypy clean.
 
 ## In progress
-None (T1 complete; ready to begin T2.1).
+None (T2.1 complete; stopped before merge).
 
 ## Next step
-T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies).
+Review T2.1 and merge branch `t2-auth` into `main`, then proceed to T2.2 Projects backend.
 
 ## Known problems / open questions
+- Duplicate-email 409 reveals registered emails: Returning 409 Conflict on registration with an existing email allows account enumeration via signup probing.
+- Rate limiter is in-process, keyed by email only, stored in an unbounded in-memory dictionary, and can be used to lock out a victim: An attacker submitting repeated wrong passwords for a known user email will trigger a lockout for that victim; the in-memory dictionary grows with unique email attempts until server restart.
+- Deployment requires frontend and API on the same site for SameSite=Lax cookies: Browsers do not attach SameSite=Lax cookies on cross-site asynchronous requests (fetch/XHR), requiring frontend and backend to share the same registrable domain (e.g. `app.example.com` and `api.example.com`).
 - When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
 - session.py: is_sqlite uses startswith("sqlite") but folder creation uses startswith("sqlite:///"); a URL like sqlite+pysqlite:///path would break. Unused today.
 - The custom creator bypasses SQLAlchemy's SQLite connect handling, so URL options (timeout, uri) are ignored. Add a busy timeout if "database is locked" appears.

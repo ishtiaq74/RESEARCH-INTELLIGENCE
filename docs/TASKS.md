@@ -43,9 +43,14 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
   - [x] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
   - [x] T1.5f Correct DEPENDENCY_AUDIT.md (raw severities, owner upgrade note, braces *, prod claims, watch list)
 
-## T2 Auth and projects — status: todo
+## T2 Auth and projects — status: in-progress
 Goal: users can register, sign in and own private projects. No other user can see them.
-- [ ] T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies)
+- [x] T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies)
+  - [x] T2.1a Users and sessions schema + Alembic migration with foreign keys and SQLite batch mode
+  - [x] T2.1b Repositories layer (user_repository and session_repository storing SHA-256 token hashes)
+  - [x] T2.1c Service layer (Argon2id password hashing, in-process rate limiter, session management)
+  - [x] T2.1d Auth router (/register, /login, /logout, /me) with httpOnly, SameSite=Lax cookie
+  - [x] T2.1e Security fixes (SESSION_COOKIE_SECURE config, dummy hash module constant, session creation split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset)
 - [ ] T2.2 Projects backend (projects table, owner scoping in the repositories layer, CRUD, cross-user isolation tests)
 - [ ] T2.3 Frontend: sign-in, sign-up, project list and create pages
 - [ ] T2.4 Security and isolation review
