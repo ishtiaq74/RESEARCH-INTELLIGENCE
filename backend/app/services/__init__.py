@@ -7,6 +7,7 @@ from app.services.auth_service import (
     logout,
     register,
     reset_rate_limiter,
+    start_session,
     verify_password,
 )
 
@@ -18,5 +19,6 @@ __all__ = [
     "logout",
     "register",
     "reset_rate_limiter",
+    "start_session",
     "verify_password",
 ]

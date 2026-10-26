@@ -198,13 +198,25 @@ def login(db: Session, email: str, password: str) -> tuple[User, str]:
         raise AuthError("Invalid email or password.", status_code=401)
 
     _record_success(email)
+    raw_token = start_session(db, user)
+    return user, raw_token
 
+
+def start_session(db: Session, user: User) -> str:
+    """Create a new server-side session for user and return the raw token.
+
+    The raw token must be sent to the client as an httpOnly cookie;
+    only its SHA-256 hash is stored in the database.
+    Does not verify passwords and does not interact with the rate limiter.
+    """
     raw_token = secrets.token_urlsafe(32)
     expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
         hours=_SESSION_DURATION_HOURS
     )
-    repositories.create_session(db, user_id=user.id, token=raw_token, expires_at=expires_at)
-    return user, raw_token
+    repositories.create_session(
+        db, user_id=user.id, token=raw_token, expires_at=expires_at
+    )
+    return raw_token
 
 
 def logout(db: Session, token: str) -> None:

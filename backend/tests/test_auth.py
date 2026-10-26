@@ -466,3 +466,42 @@ def test_dummy_hash_verify_mismatch_raises() -> None:
 
     with pytest.raises(VerifyMismatchError):
         _ph.verify(_DUMMY_HASH, "wrong")
+
+
+# ---------------------------------------------------------------------------
+# Session creation split tests (T2.1 Step 3)
+# ---------------------------------------------------------------------------
+
+
+def test_register_does_not_touch_rate_limiter_and_login_creates_second_session(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Registering bypasses rate limiter; register + login produces 2 sessions."""
+    from app.services.auth_service import _rate_limit_state
+
+    db, client = db_and_client
+    email = "split_session@example.com"
+    pwd = "password123"
+
+    res_reg = client.post("/auth/register", json={"email": email, "password": pwd})
+    assert res_reg.status_code == 201
+
+    # Assert rate limiter state is untouched for this email
+    assert email not in _rate_limit_state
+
+    user = db.query(User).filter(User.email == email).first()
+    assert user is not None
+    sessions_after_reg = (
+        db.query(SessionModel).filter(SessionModel.user_id == user.id).all()
+    )
+    assert len(sessions_after_reg) == 1
+
+    # Log in explicitly
+    res_login = client.post("/auth/login", json={"email": email, "password": pwd})
+    assert res_login.status_code == 200
+
+    sessions_after_login = (
+        db.query(SessionModel).filter(SessionModel.user_id == user.id).all()
+    )
+    assert len(sessions_after_login) == 2
+    assert sessions_after_login[0].token_hash != sessions_after_login[1].token_hash

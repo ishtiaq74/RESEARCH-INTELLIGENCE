@@ -30,7 +30,13 @@ from app.config import Settings, settings
 from app.db.session import get_db
 from app.dependencies import SESSION_COOKIE_NAME, require_current_user
 from app.models.user import User
-from app.services.auth_service import AuthError, login, logout, register
+from app.services.auth_service import (
+    AuthError,
+    login,
+    logout,
+    register,
+    start_session,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -117,12 +123,8 @@ def register_user(
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    # Log the user in immediately by creating a session
-    try:
-        _, token = login(db, email=str(body.email), password=body.password)
-    except AuthError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-
+    # Issue a session cookie immediately without re-verifying password or rate-limiting
+    token = start_session(db, user)
     _set_session_cookie(response, token, request)
     return UserResponse(id=user.id, email=user.email)
 
