@@ -19,6 +19,8 @@ WHY 404 INSTEAD OF 403 FOR CROSS-USER ACCESS:
 """
 from __future__ import annotations
 
+import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
@@ -49,26 +51,13 @@ class UpdateProjectRequest(BaseModel):
 
 
 class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     owner_id: int
-    created_at: str
-    updated_at: str
-
-    model_config = {"from_attributes": True}
-
-    @classmethod
-    def from_orm_model(cls, project: object) -> ProjectResponse:
-        from app.models.project import Project as ProjectModel
-
-        p: ProjectModel = project  # type: ignore[assignment]
-        return cls(
-            id=p.id,
-            name=p.name,
-            owner_id=p.owner_id,
-            created_at=p.created_at.isoformat(),
-            updated_at=p.updated_at.isoformat(),
-        )
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +83,7 @@ def create(
         )
     except project_service.ProjectError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return ProjectResponse.from_orm_model(project)
+    return ProjectResponse.model_validate(project)
 
 
 @router.get("", response_model=list[ProjectResponse])
@@ -111,7 +100,7 @@ def list_all(
         )
     except project_service.ProjectError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return [ProjectResponse.from_orm_model(p) for p in projects]
+    return [ProjectResponse.model_validate(p) for p in projects]
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -131,7 +120,7 @@ def get_one(
         )
     except project_service.ProjectError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return ProjectResponse.from_orm_model(project)
+    return ProjectResponse.model_validate(project)
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
@@ -155,7 +144,7 @@ def update(
         )
     except project_service.ProjectError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return ProjectResponse.from_orm_model(project)
+    return ProjectResponse.model_validate(project)
 
 
 @router.delete("/{project_id}", status_code=204)
