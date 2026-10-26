@@ -94,7 +94,12 @@ def _is_locked_out(email: str) -> bool:
             return False
         if until is None:
             return False
-        return datetime.datetime.now(datetime.UTC) < until
+        now = datetime.datetime.now(datetime.UTC)
+        if now < until:
+            return True
+        # Lockout has expired: clear this email's state so the counter restarts
+        _rate_limit_state.pop(email, None)
+        return False
 
 
 def _record_failed(email: str) -> None:

@@ -578,3 +578,55 @@ def test_login_overlength_password_returns_422(
         json={"email": "user@example.com", "password": pw_129},
     )
     assert res.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Rate limiter lockout expiry tests (T2.1 Step 7)
+# ---------------------------------------------------------------------------
+
+
+def test_rate_limiter_lockout_expiry_resets_counter(
+    db_and_client: tuple[Session, TestClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After lockout expires, one wrong password does not immediately re-lock."""
+    import app.services.auth_service as auth_service
+
+    db, client = db_and_client
+    email = "lockout_expiry@example.com"
+    pwd = "correct_password"
+
+    client.post("/auth/register", json={"email": email, "password": pwd})
+    client.cookies.clear()
+
+    # Trigger 10 failed login attempts to lock the account
+    for _ in range(10):
+        res = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+        assert res.status_code == 401
+
+    # 11th attempt should return 429 Too Many Requests
+    res_locked = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+    assert res_locked.status_code == 429
+
+    # Advance time by 65 seconds past the 60-second lockout period
+    now = datetime.datetime.now(datetime.UTC)
+    future_time = now + datetime.timedelta(seconds=65)
+
+    class MockDateTime(datetime.datetime):
+        @classmethod
+        def now(cls, tz: datetime.tzinfo | None = None) -> datetime.datetime:  # type: ignore[override]
+            return future_time
+
+    monkeypatch.setattr(auth_service.datetime, "datetime", MockDateTime)
+
+    # Next attempt with wrong password should fail with 401 (not 429)
+    res_post_expiry = client.post(
+        "/auth/login", json={"email": email, "password": "wrong_password"}
+    )
+    assert res_post_expiry.status_code == 401, (
+        f"Expected 401 after lockout expiry, got {res_post_expiry.status_code}"
+    )
+
+    # Subsequent attempt with correct password succeeds (counter restarted at 1)
+    res_check = client.post("/auth/login", json={"email": email, "password": pwd})
+    assert res_check.status_code == 200
