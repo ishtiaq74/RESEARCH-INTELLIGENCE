@@ -451,3 +451,18 @@ def test_session_cookie_omits_secure_flag_when_setting_is_false(
     assert "secure" not in set_cookie.lower(), (
         f"Expected no 'Secure' attribute in Set-Cookie header: {set_cookie}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Dummy hash test (T2.1 Step 2)
+# ---------------------------------------------------------------------------
+
+
+def test_dummy_hash_verify_mismatch_raises() -> None:
+    """_ph.verify(_DUMMY_HASH, 'wrong') raises VerifyMismatchError."""
+    from argon2.exceptions import VerifyMismatchError
+
+    from app.services.auth_service import _DUMMY_HASH, _ph
+
+    with pytest.raises(VerifyMismatchError):
+        _ph.verify(_DUMMY_HASH, "wrong")

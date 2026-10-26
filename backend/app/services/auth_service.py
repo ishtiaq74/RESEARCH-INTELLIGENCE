@@ -45,6 +45,7 @@ from app.models.user import User
 _ph = PasswordHasher()
 # Argon2id with default parameters (time_cost=3, memory_cost=65536, parallelism=4).
 # These are OWASP-recommended defaults for Argon2id.
+_DUMMY_HASH: str = _ph.hash("dummy-password-not-a-real-credential")
 
 
 def hash_password(plaintext: str) -> str:
@@ -186,15 +187,9 @@ def login(db: Session, email: str, password: str) -> tuple[User, str]:
     # WHY: if we returned early on missing user, the response time would be
     # shorter than for an existing user with a wrong password.  An attacker
     # could exploit that timing difference to enumerate valid emails.
-    # We use a pre-computed Argon2id hash of the literal string "dummy" as the
-    # stand-in hash.  verify_password will return False (VerifyMismatchError)
-    # after running the full Argon2id computation, giving the same wall-clock
-    # time as a real failed login.
-    _DUMMY_HASH = (
-        "$argon2id$v=19$m=65536,t=3,p=4"
-        "$ky0SzxAtck8hmECS8kDZCg"
-        "$npJVQPbLp1zNOAIdn8pg7tCztwxBx0IMqKCl7TLHW9U"
-    )
+    # We use module-level _DUMMY_HASH as the stand-in hash.
+    # verify_password will return False (VerifyMismatchError) after running the
+    # full Argon2id computation, giving the same wall-clock time as a real failed login.
     candidate_hash = user.password_hash if user is not None else _DUMMY_HASH
     ok = verify_password(candidate_hash, password)
 
