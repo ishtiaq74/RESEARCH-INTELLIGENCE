@@ -23,6 +23,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         version=cfg.app_version,
         debug=cfg.debug,
     )
+    app.state.settings = cfg
 
     # T2 CORS change: allow_credentials=True required for session cookies.
     #

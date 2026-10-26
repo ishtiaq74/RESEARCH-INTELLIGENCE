@@ -77,7 +77,12 @@ def db_and_client(tmp_path: Path) -> Generator[
         finally:
             db.close()
 
-    app = create_app(Settings(cors_origins="http://localhost:3000"))
+    app = create_app(
+        Settings(
+            cors_origins="http://localhost:3000",
+            session_cookie_secure=False,
+        )
+    )
     app.dependency_overrides[get_db] = override_get_db
 
     client = TestClient(app, raise_server_exceptions=True)
@@ -381,3 +386,68 @@ def test_expired_session_returns_401(
 
     response = client.get("/auth/me")
     assert response.status_code == 401, "Expired session must return 401"
+
+
+# ---------------------------------------------------------------------------
+# Session cookie Secure flag tests (T2.1 Step 1)
+# ---------------------------------------------------------------------------
+
+
+def test_session_cookie_has_secure_flag_when_setting_is_true(
+    tmp_path: Path,
+) -> None:
+    """Cookie has 'Secure' attribute when session_cookie_secure=True."""
+    db_file = tmp_path / "test_secure_true.db"
+    db_url = f"sqlite:///{db_file.as_posix()}"
+
+    alembic_cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_db_engine(db_url)
+    factory = create_session_factory(engine)
+
+    def override_get_db() -> Generator[Session, None, None]:
+        db = factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = create_app(
+        Settings(
+            cors_origins="http://localhost:3000",
+            session_cookie_secure=True,
+        )
+    )
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app, raise_server_exceptions=True)
+
+    try:
+        response = client.post(
+            "/auth/register",
+            json={"email": "secure_user@example.com", "password": "password123"},
+        )
+        assert response.status_code == 201
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "secure" in set_cookie.lower(), (
+            f"Expected 'Secure' attribute in Set-Cookie header: {set_cookie}"
+        )
+    finally:
+        engine.dispose()
+
+
+def test_session_cookie_omits_secure_flag_when_setting_is_false(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Cookie omits 'Secure' attribute when session_cookie_secure=False."""
+    db, client = db_and_client
+    response = client.post(
+        "/auth/register",
+        json={"email": "insecure_user@example.com", "password": "password123"},
+    )
+    assert response.status_code == 201
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "secure" not in set_cookie.lower(), (
+        f"Expected no 'Secure' attribute in Set-Cookie header: {set_cookie}"
+    )

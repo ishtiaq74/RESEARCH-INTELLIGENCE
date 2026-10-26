@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = DEFAULT_DATABASE_URL
 
+    # Session cookie security: default True for production (requires HTTPS).
+    # In local development (.env) and tests, set to False for plain HTTP.
+    session_cookie_secure: bool = True
+
     # CORS: comma-separated list of allowed origins. No wildcard allowed.
     # T2: allow_credentials=True requires explicit origins (never wildcard).
     # WHY CREDENTIALS REQUIRE EXPLICIT ORIGINS:

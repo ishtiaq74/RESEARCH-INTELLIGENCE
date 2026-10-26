@@ -13,9 +13,12 @@ SameSite=Lax:
   but NOT on cross-site POST/PUT/DELETE requests.  This eliminates the most common
   CSRF attack vector (see app/dependencies.py for the full CSRF analysis).
 
-Secure (when not on localhost):
-  The cookie is only sent over HTTPS in production.  On localhost the Secure flag
-  is omitted so local development works without TLS.
+Secure:
+  The cookie Secure flag is controlled by Settings.session_cookie_secure
+  (True by default in production). In local development and test settings, it
+  is set to False so plain HTTP works. The Host header is never used to determine
+  security flags because Host is client-controlled ("localhost.evil.com" matches
+  startswith("localhost")).
 """
 from __future__ import annotations
 
@@ -23,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.orm import Session
 
+from app.config import Settings, settings
 from app.db.session import get_db
 from app.dependencies import SESSION_COOKIE_NAME, require_current_user
 from app.models.user import User
@@ -69,37 +73,22 @@ class UserResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _is_localhost(request: Request) -> bool:
-    """Return True if the request appears to come from localhost or a test client.
-
-    WHY testserver:
-      Starlette's TestClient sends requests with host='testserver'.  If we set
-      Secure=True in that context, httpx (the underlying HTTP client) silently
-      drops the cookie on subsequent plain-http requests, breaking all session-
-      dependent tests.  testserver is not a public internet host, so omitting
-      Secure is safe in this context.
-    """
-    host = request.headers.get("host", "")
-    return (
-        host.startswith("localhost")
-        or host.startswith("127.0.0.1")
-        or host == "testserver"
-    )
-
-
 def _set_session_cookie(response: Response, token: str, request: Request) -> None:
     """Write the session cookie on response.
 
-    secure=True is omitted on localhost so devs can test without TLS.
+    secure is driven by settings.session_cookie_secure (True in prod, False in local dev).
+    The Host header is client-controlled and must never decide a security flag
+    (e.g. "localhost.evil.com" matches startswith("localhost")).
     samesite="lax" prevents cross-site POST CSRF (see dependencies.py).
     httponly=True prevents JS from reading the cookie value.
     """
+    app_settings: Settings = getattr(request.app.state, "settings", settings)
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
         httponly=True,
         samesite="lax",
-        secure=not _is_localhost(request),
+        secure=app_settings.session_cookie_secure,
         max_age=_SESSION_MAX_AGE_SECONDS,
         path="/",
     )
