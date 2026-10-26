@@ -192,3 +192,32 @@ def test_post_preflight_disallowed_origin_gets_no_allow_header() -> None:
     assert acao is None or acao != DISALLOWED, (
         f"POST preflight for disallowed origin should not return allow header, got: {acao!r}"
     )
+
+
+def test_patch_preflight_allowed_origin_succeeds() -> None:
+    """T2.2: OPTIONS preflight for PATCH from an allowed origin must succeed."""
+    client = _client(ALLOWED)
+    response = client.options(
+        "/projects/1",
+        headers={
+            "Origin": ALLOWED,
+            "Access-Control-Request-Method": "PATCH",
+        },
+    )
+    assert response.status_code == 200
+    acao = response.headers.get("access-control-allow-origin")
+    assert acao == ALLOWED, f"PATCH preflight allowed origin expected '{ALLOWED}', got: {acao!r}"
+
+
+def test_no_set_cookie_in_expose_headers() -> None:
+    """Set-Cookie must NOT be exposed in Access-Control-Expose-Headers.
+
+    Per WHATWG Fetch standard (Section 2.2), Set-Cookie is a forbidden
+    response-header name and browsers never expose it to client-side JavaScript.
+    """
+    client = _client(ALLOWED)
+    response = client.get("/health", headers={"Origin": ALLOWED})
+    aceh = response.headers.get("access-control-expose-headers", "")
+    assert "set-cookie" not in aceh.lower(), (
+        f"Set-Cookie must not be in Access-Control-Expose-Headers, got: {aceh!r}"
+    )

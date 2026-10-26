@@ -39,24 +39,15 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     #   validator (field_validator on cors_origins) ensures "*" can never appear
     #   in the origins list, so this combination is structurally impossible here.
     #
-    # WHY POST and DELETE ARE NOW INCLUDED:
-    #   The auth endpoints use POST (/register, /login, /logout).  Restricting
-    #   methods to GET only (T1.2e-3) blocked these.  We now explicitly list
-    #   the methods used by T2 auth endpoints.
-    #
-    # WHY expose_headers INCLUDES set-cookie:
-    #   Browsers restrict which response headers JavaScript can read.  Adding
-    #   'set-cookie' to expose_headers lets the frontend react to cookie changes
-    #   (e.g. detecting a session expiry from a 401 rather than reading the cookie).
-    #   Note: httpOnly cookies are still unreadable by JS — expose_headers only
-    #   affects what the XHR/fetch API can see in the response headers object.
+    # WHY POST, DELETE, AND PATCH ARE NOW INCLUDED:
+    #   The auth endpoints use POST (/register, /login, /logout), and the
+    #   projects endpoints use GET, POST, DELETE, and PATCH.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cfg.cors_origins_list,
         allow_credentials=True,
         allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
-        expose_headers=["set-cookie"],
     )
 
     app.include_router(health.router)
