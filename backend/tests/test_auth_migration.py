@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -109,9 +110,9 @@ def test_auth_migration_full_lifecycle(tmp_path: Path) -> None:
     try:
         with engine.connect() as conn:
             rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            expected = "e89a308107ea"
+            expected = ScriptDirectory.from_config(alembic_cfg).get_current_head()
             assert rev == expected, (
-                f"Expected projects migration revision (head), got {rev!r}"
+                f"Expected migration revision at head ({expected}), got {rev!r}"
             )
     finally:
         engine.dispose()

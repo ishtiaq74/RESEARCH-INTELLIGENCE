@@ -28,6 +28,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
@@ -151,15 +152,21 @@ def test_projects_columns(migrated_engine: Engine) -> None:
 
 
 def test_projects_migration_downgrade_removes_table(tmp_path: Path) -> None:
-    """Downgrade to 9f02bdd2f87e (before projects) must remove the projects table."""
+    """Downgrade to projects migration's parent must remove the projects table."""
     db_file = tmp_path / "migration_down_projects.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
     alembic_cfg = Config(str(BACKEND_DIR / "alembic.ini"))
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
+    script = ScriptDirectory.from_config(alembic_cfg)
+    projects_rev = next(
+        s for s in script.walk_revisions() if "project" in (s.doc or "").lower()
+    )
+    parent_rev = str(projects_rev.down_revision)
+
     command.upgrade(alembic_cfg, "head")
-    command.downgrade(alembic_cfg, "9f02bdd2f87e")  # one step back
+    command.downgrade(alembic_cfg, parent_rev)  # downgrade projects migration
 
     engine = create_db_engine(db_url)
     try:
@@ -174,22 +181,29 @@ def test_projects_migration_downgrade_removes_table(tmp_path: Path) -> None:
 
 
 def test_projects_migration_full_lifecycle(tmp_path: Path) -> None:
-    """Full cycle: upgrade head → downgrade to 9f02bdd2f87e → upgrade head."""
+    """Full cycle: upgrade head → downgrade to parent → upgrade head."""
     db_file = tmp_path / "migration_lifecycle_projects.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
     alembic_cfg = Config(str(BACKEND_DIR / "alembic.ini"))
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
+    script = ScriptDirectory.from_config(alembic_cfg)
+    projects_rev = next(
+        s for s in script.walk_revisions() if "project" in (s.doc or "").lower()
+    )
+    parent_rev = str(projects_rev.down_revision)
+    head_rev = script.get_current_head()
+
     command.upgrade(alembic_cfg, "head")
-    command.downgrade(alembic_cfg, "9f02bdd2f87e")
+    command.downgrade(alembic_cfg, parent_rev)
     command.upgrade(alembic_cfg, "head")
 
     engine = create_db_engine(db_url)
     try:
         with engine.connect() as conn:
             rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            assert rev == "e89a308107ea", f"Expected projects migration at head, got {rev!r}"
+            assert rev == head_rev, f"Expected projects migration at head ({head_rev}), got {rev!r}"
     finally:
         engine.dispose()
 
