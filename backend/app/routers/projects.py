@@ -26,13 +26,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies import require_current_user
 from app.models.user import User
-from app.repositories.project_repository import (
-    create_project,
-    delete_project,
-    get_project,
-    list_projects,
-    update_project,
-)
+from app.services import project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -88,9 +82,14 @@ def create(
 
     Returns 201 with the created project on success.
     Returns 401 if not authenticated.
-    Returns 422 if name is empty or exceeds 200 characters.
+    Returns 422 if name is invalid.
     """
-    project = create_project(db, owner_id=current_user.id, name=body.name)
+    try:
+        project = project_service.create_project(
+            db, owner_id=current_user.id, name=body.name
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ProjectResponse.from_orm_model(project)
 
 
@@ -100,7 +99,7 @@ def list_all(
     current_user: User = Depends(require_current_user),
 ) -> list[ProjectResponse]:
     """Return all projects owned by the current user (ordered by id)."""
-    projects = list_projects(db, owner_id=current_user.id)
+    projects = project_service.list_projects(db, owner_id=current_user.id)
     return [ProjectResponse.from_orm_model(p) for p in projects]
 
 
@@ -115,9 +114,12 @@ def get_one(
     Returns 404 if the project does not exist or belongs to another user.
     (WHY 404 not 403: see module docstring.)
     """
-    project = get_project(db, owner_id=current_user.id, project_id=project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        project = project_service.get_project(
+            db, owner_id=current_user.id, project_id=project_id
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ProjectResponse.from_orm_model(project)
 
 
@@ -131,16 +133,17 @@ def update(
     """Rename a project.
 
     Returns 404 if the project does not exist or belongs to another user.
-    Returns 422 if name is empty or exceeds 200 characters.
+    Returns 422 if name is invalid.
     """
-    project = update_project(
-        db,
-        owner_id=current_user.id,
-        project_id=project_id,
-        name=body.name,
-    )
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        project = project_service.update_project(
+            db,
+            owner_id=current_user.id,
+            project_id=project_id,
+            name=body.name,
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ProjectResponse.from_orm_model(project)
 
 
@@ -155,6 +158,9 @@ def delete(
     Returns 204 on success.
     Returns 404 if the project does not exist or belongs to another user.
     """
-    deleted = delete_project(db, owner_id=current_user.id, project_id=project_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        project_service.delete_project(
+            db, owner_id=current_user.id, project_id=project_id
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

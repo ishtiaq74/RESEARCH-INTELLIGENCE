@@ -10,9 +10,15 @@ from app.services.auth_service import (
     start_session,
     verify_password,
 )
+from app.services.project_service import (
+    ProjectError,
+    ProjectNotFoundError,
+)
 
 __all__ = [
     "AuthError",
+    "ProjectError",
+    "ProjectNotFoundError",
     "get_current_user",
     "hash_password",
     "login",
