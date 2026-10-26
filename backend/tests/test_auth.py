@@ -516,8 +516,6 @@ def test_register_duplicate_email_race_condition_returns_409(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Simulated race on create_user triggers DB constraint and returns 409, not 500."""
-    import app.services.auth_service
-
     db, client = db_and_client
     email = "race@example.com"
     payload = {"email": email, "password": "password123"}
@@ -528,8 +526,7 @@ def test_register_duplicate_email_race_condition_returns_409(
 
     # Simulate race condition: pre-check returns None as if user did not exist yet
     monkeypatch.setattr(
-        app.services.auth_service.repositories,
-        "get_user_by_email",
+        "app.services.auth_service.repositories.get_user_by_email",
         lambda db, em: None,
     )
 
@@ -590,8 +587,6 @@ def test_rate_limiter_lockout_expiry_resets_counter(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """After lockout expires, one wrong password does not immediately re-lock."""
-    import app.services.auth_service as auth_service
-
     db, client = db_and_client
     email = "lockout_expiry@example.com"
     pwd = "correct_password"
@@ -612,12 +607,12 @@ def test_rate_limiter_lockout_expiry_resets_counter(
     now = datetime.datetime.now(datetime.UTC)
     future_time = now + datetime.timedelta(seconds=65)
 
-    class MockDateTime(datetime.datetime):
+    class MockDateTime:
         @classmethod
-        def now(cls, tz: datetime.tzinfo | None = None) -> datetime.datetime:  # type: ignore[override]
+        def now(cls, tz: datetime.tzinfo | None = None) -> datetime.datetime:
             return future_time
 
-    monkeypatch.setattr(auth_service.datetime, "datetime", MockDateTime)
+    monkeypatch.setattr("app.services.auth_service.datetime.datetime", MockDateTime)
 
     # Next attempt with wrong password should fail with 401 (not 429)
     res_post_expiry = client.post(
