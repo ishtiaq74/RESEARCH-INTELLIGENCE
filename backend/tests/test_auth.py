@@ -505,3 +505,36 @@ def test_register_does_not_touch_rate_limiter_and_login_creates_second_session(
     )
     assert len(sessions_after_login) == 2
     assert sessions_after_login[0].token_hash != sessions_after_login[1].token_hash
+
+
+# ---------------------------------------------------------------------------
+# Duplicate email race condition tests (T2.1 Step 4)
+# ---------------------------------------------------------------------------
+
+
+def test_register_duplicate_email_race_condition_returns_409(
+    db_and_client: tuple[Session, TestClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Simulated race on create_user triggers DB constraint and returns 409, not 500."""
+    import app.services.auth_service
+
+    db, client = db_and_client
+    email = "race@example.com"
+    payload = {"email": email, "password": "password123"}
+
+    # First registration succeeds
+    res1 = client.post("/auth/register", json=payload)
+    assert res1.status_code == 201
+
+    # Simulate race condition: pre-check returns None as if user did not exist yet
+    monkeypatch.setattr(
+        app.services.auth_service.repositories,
+        "get_user_by_email",
+        lambda db, em: None,
+    )
+
+    # Second registration hits DB unique constraint on create_user
+    res2 = client.post("/auth/register", json=payload)
+    assert res2.status_code == 409, f"Expected 409, got {res2.status_code}: {res2.text}"
+    assert "already registered" in res2.json().get("detail", "").lower()

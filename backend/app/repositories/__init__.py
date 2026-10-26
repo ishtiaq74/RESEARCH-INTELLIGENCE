@@ -6,12 +6,14 @@ from app.repositories.session_repository import (
     get_session_by_token,
 )
 from app.repositories.user_repository import (
+    DuplicateEmailError,
     create_user,
     get_user_by_email,
     get_user_by_id,
 )
 
 __all__ = [
+    "DuplicateEmailError",
     "create_session",
     "create_user",
     "delete_expired_sessions",

@@ -15,9 +15,14 @@ from __future__ import annotations
 
 import datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.user import User
+
+
+class DuplicateEmailError(Exception):
+    """Raised when user creation violates the unique email constraint."""
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -36,13 +41,20 @@ def create_user(db: Session, email: str, password_hash: str) -> User:
     email is stored lowercased so lookups are case-insensitive.
     password_hash must already be an Argon2id digest — never pass plaintext here.
     created_at is set by the ORM default.
+
+    Catches sqlalchemy IntegrityError (e.g. concurrent registration race),
+    rolls back the transaction, and raises DuplicateEmailError.
     """
     user = User(
         email=email.lower(),
         password_hash=password_hash,
         created_at=datetime.datetime.now(datetime.UTC),
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except IntegrityError as exc:
+        db.rollback()
+        raise DuplicateEmailError("Email already registered.") from exc

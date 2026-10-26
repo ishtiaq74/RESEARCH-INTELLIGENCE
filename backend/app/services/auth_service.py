@@ -33,6 +33,7 @@ import threading
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import repositories
@@ -163,7 +164,10 @@ def register(db: Session, email: str, password: str) -> User:
 
     password_hash = hash_password(password)
     # NEVER log `password` here
-    return repositories.create_user(db, email=email, password_hash=password_hash)
+    try:
+        return repositories.create_user(db, email=email, password_hash=password_hash)
+    except (repositories.DuplicateEmailError, IntegrityError) as exc:
+        raise AuthError("Email already registered.", status_code=409) from exc
 
 
 def login(db: Session, email: str, password: str) -> tuple[User, str]:
