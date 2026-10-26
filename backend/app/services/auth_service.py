@@ -5,8 +5,7 @@ Routers never touch DB sessions or model objects directly; they call service
 functions which return simple domain objects.
 
 WHY ARGON2ID:
-  Argon2id won the 2015 Password Hashing Competition and is the OWASP-recommended
-  algorithm as of 2023.  It is resistant to:
+  Argon2id won the 2015 Password Hashing Competition and provides strong resistance to:
     - GPU brute force (memory-hard)
     - side-channel attacks (id variant combines the i and d variants)
   bcrypt is still safe but has a 72-byte password limit and is older.
@@ -44,8 +43,8 @@ from app.models.user import User
 # ---------------------------------------------------------------------------
 
 _ph = PasswordHasher()
-# Argon2id with default parameters (time_cost=3, memory_cost=65536, parallelism=4).
-# These are OWASP-recommended defaults for Argon2id.
+# Argon2id with argon2-cffi library default parameters:
+# time_cost=3, memory_cost=65536 (64 MiB), parallelism=4, hash_len=32, salt_len=16.
 _DUMMY_HASH: str = _ph.hash("dummy-password-not-a-real-credential")
 
 
@@ -240,9 +239,10 @@ def get_current_user(db: Session, token: str | None) -> User | None:
     """Return the User for a valid, non-expired session token, or None.
 
     WHY CHECK expires_at IN APPLICATION CODE:
-      We could add a WHERE clause in the repository, but checking here makes
-      the expiry logic explicit and testable without a DB query.  We do filter
-      in the repository query below for defence in depth.
+      get_session_by_token looks up the session by token hash alone without
+      filtering on expiry. Checking expires_at in application code makes the expiry
+      logic explicit, normalises SQLite UTC datetimes, and allows lazy deletion
+      of expired sessions from the database.
     """
     if not token:
         return None
