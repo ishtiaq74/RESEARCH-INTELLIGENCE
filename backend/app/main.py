@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
 from app.config import settings as _default_settings
-from app.routers import auth, health
+from app.routers import auth, health, projects
 
 
 def create_app(cfg: Settings | None = None) -> FastAPI:
@@ -54,13 +54,14 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=cfg.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         expose_headers=["set-cookie"],
     )
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(projects.router)
 
     return app
 

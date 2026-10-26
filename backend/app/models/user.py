@@ -23,9 +23,13 @@ WHY sessions.token_hash AND NOT sessions.token:
 from __future__ import annotations
 
 import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.project import Project
 
 
 class Base(DeclarativeBase):
@@ -54,6 +58,9 @@ class User(Base):
 
     sessions: Mapped[list[Session]] = relationship(
         "Session", back_populates="user", cascade="all, delete-orphan"
+    )
+    projects: Mapped[list[Project]] = relationship(
+        "Project", back_populates="owner", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

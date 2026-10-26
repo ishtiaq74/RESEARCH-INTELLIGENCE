@@ -109,7 +109,10 @@ def test_auth_migration_full_lifecycle(tmp_path: Path) -> None:
     try:
         with engine.connect() as conn:
             rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            assert rev == "9f02bdd2f87e", f"Expected auth migration revision, got {rev!r}"
+            expected = "e89a308107ea"
+            assert rev == expected, (
+                f"Expected projects migration revision (head), got {rev!r}"
+            )
     finally:
         engine.dispose()
 
