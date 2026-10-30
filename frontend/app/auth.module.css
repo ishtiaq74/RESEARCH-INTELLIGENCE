@@ -1,0 +1,120 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1.25rem;
+}
+
+.heading {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  margin-top: -0.5rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  min-width: 280px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.input {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  color: var(--color-text);
+  transition: border-color 0.15s ease-in-out;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.button {
+  background-color: var(--color-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, opacity 0.15s ease-in-out;
+  margin-top: 0.5rem;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  color: var(--color-error-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.errorIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
