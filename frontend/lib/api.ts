@@ -208,3 +208,4 @@ export async function deleteProject(id: number): Promise<void> {
     method: "DELETE",
   });
 }
+

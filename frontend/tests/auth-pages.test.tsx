@@ -238,3 +238,4 @@ describe("Auth pages (Register & Login)", () => {
     });
   });
 });
+
