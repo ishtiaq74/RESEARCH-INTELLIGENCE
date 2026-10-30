@@ -59,7 +59,13 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.2e Projects router & schemas (ConfigDict str_strip_whitespace=True, 1-100 char name limit, pagination limit/offset, real datetime fields in ProjectResponse with model_validate, no type: ignore)
   - [x] T2.2f CORS cleanup (removed expose_headers=["set-cookie"] per WHATWG Fetch spec, added PATCH preflight)
   - [x] T2.2g Comprehensive test suite (99 passing backend tests: CRUD happy paths, unauthenticated 401s, 422 on whitespace-only/length violations, 404 on missing and not-owned, identical response bodies for cross-user and missing ids, pagination slicing and 100 cap)
-- [ ] T2.3 Frontend: sign-in, sign-up, project list and create pages
+- [x] T2.3 Frontend: sign-in, sign-up, project list and create pages
+  - [x] T2.3a Tests setup (Vitest 4.1.12, React Testing Library 16.3.3, jsdom, @vitejs/plugin-react, trivial test passing, npm audit verified with 0 vulnerabilities)
+  - [x] T2.3b API client module (lib/api.ts with typed auth and project functions, credentials: "include", centralized error mapping, 15 unit tests passing)
+  - [x] T2.3c Auth pages (app/register/page.tsx, app/login/page.tsx, auth.module.css, client-side password length 8-128 hint, disabled submit while submitting, aria-live errors, GET /auth/me client-side UX guard)
+  - [x] T2.3d Projects page (app/projects/page.tsx, projects.module.css, loading/empty/error/list states, create form with trimmed 1-100 char validation, inline rename, delete confirmation step, sign-out button, 401 redirect)
+  - [x] T2.3e Component test suite (tests/auth-pages.test.tsx, tests/projects-page.test.tsx with mocked API client, 36 frontend tests passing)
+  - [x] T2.3f Docs update (TASKS.md, HANDOFF.md with local setup instructions, SESSION_COOKIE_SECURE=false, localhost vs 127.0.0.1 explanation)
 - [ ] T2.4 Security and isolation review
 - [ ] T2.5 README and HANDOFF update; stop before merge
 Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.

@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1 done, ready for T2.1)
+Last updated by: Antigravity (T2.3 done, ready for T2.4)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -9,7 +9,7 @@ Last updated by: Antigravity (T1 done, ready for T2.1)
 - T1.2a Frontend skeleton: **done** — Next.js 16.4.2, App Router, TypeScript strict, ESLint, all pinned.
 - T1.2b Home page: **done** — fetches `{NEXT_PUBLIC_API_BASE_URL}/health`, shows loading/ok/error states. Boilerplate SVGs removed, dark-mode CSS removed, README replaced.
 - T1.2c Backend CORS: **done** — `CORS_ORIGINS` setting (comma-separated, default `http://localhost:3000`, no wildcard), wired via CORSMiddleware. Test confirms allowed origin gets header, disallowed does not.
-- T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL`.
+- T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 - T1.2e-1 Testable app factory: **done** — `create_app()` accepts `cfg: Settings | None`; `app = create_app()` at module level preserved. `test_cors.py` rewritten to use `create_app(Settings(cors_origins=...))` directly; hand-built `_make_client` removed.
 - T1.2e-2 No-wildcard enforcement: **done** — `Settings` now has a `field_validator` that raises `ValueError` at startup if `cors_origins` is empty or contains `*`. Tests: wildcard raises, wildcard-in-list raises, empty raises.
 - T1.2e-3 Narrow CORS: **done** — `allow_credentials=False`, `allow_methods=["GET", "OPTIONS"]`, `allow_headers=["Content-Type", "Authorization"]`. Comment in code: "T2 will revisit allow_methods and allow_headers when auth is designed."
@@ -37,12 +37,13 @@ Last updated by: Antigravity (T1 done, ready for T2.1)
 - T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
 - T2.1 Backend auth: **done** — email + password auth, server-side sessions in SQLite, Alembic migration with foreign keys and batch mode, CORS credentials enabled with explicit origins, Argon2id hashing, in-process rate limiting, and all security fixes completed (SESSION_COOKIE_SECURE setting, dummy hash constant, start_session split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset). 55 backend tests passing, ruff and mypy clean.
 - T2.2 Projects backend: **done** — projects table with owner_id FK (CASCADE), index, timestamps; project_repository scoping every query by owner_id and id; project_service layer enforcing ownership, name rules (strip whitespace, 1-100 chars), and raising identical ProjectNotFoundError (404) for missing and cross-user projects; router calling only service; pagination (limit 50 default, max 100 via Query le=100 returning 422, offset >= 0, id ascending); ProjectResponse using real datetime fields with model_validate (from_orm_model and all type: ignore removed); CORS updated to remove expose_headers=["set-cookie"] per WHATWG Fetch standard; dynamic ScriptDirectory head/parent lookups in migration tests; 99 passing tests, ruff and mypy clean.
+- T2.3 Frontend auth & projects: **done** — Vitest 4.1.12 + React Testing Library 16.3.3 + jsdom test runner configured; single typed API client (`frontend/lib/api.ts`) using `fetch` with `credentials: "include"`, zero storage of tokens in localStorage/sessionStorage, centralized error mapping; sign-up page (`/register`) and sign-in page (`/login`) with client-side hints (8-128 chars), disabled submit buttons, aria-live regions, and client-side GET `/auth/me` guard; projects page (`/projects`) with loading, empty, error, and list states, project creation (name trimmed, 1-100 chars), inline rename, delete confirmation step, sign-out button, and 401 redirect to sign-in; 36 passing frontend tests; lint and type-check clean; production build verified.
 
 ## In progress
-None (T2.2 complete; stopped before merge).
+None (T2.3 complete; stopped before merge).
 
 ## Next step
-Review T2.2 and merge branch `t2-auth` into `main`, then proceed to T2.3 Frontend (sign-in, sign-up, project list and create pages).
+Proceed to T2.4 Security and isolation review.
 
 ## Known problems / open questions
 - Duplicate-email 409 reveals registered emails: Returning 409 Conflict on registration with an existing email allows account enumeration via signup probing.
@@ -59,28 +60,63 @@ Review T2.2 and merge branch `t2-auth` into `main`, then proceed to T2.3 Fronten
 - Hosting jurisdiction undecided (not needed until deployment; email verification deferred for MVP per D-015; Google sign-in deferred in T2 per D-016).
 - `httpx` deprecation warning from `starlette.testclient` (harmless now; fix when upgrading starlette).
 
-## How to run
+## How to run backend and frontend together locally
 
-### Backend
-```bash
+### Prerequisites & Important Rules
+1. **SESSION_COOKIE_SECURE=false requirement**:
+   In local development, the backend runs on plain HTTP (`http://localhost:8000`). If `SESSION_COOKIE_SECURE` is `true` (the production default), the browser will silently drop and reject the Set-Cookie header because modern browsers refuse to store `Secure` cookies received over plain HTTP. Local `backend/.env` must contain `SESSION_COOKIE_SECURE=false`.
+2. **Use `localhost`, never `127.0.0.1`**:
+   The session cookie uses `SameSite=Lax`. Web browsers define a "site" by its registrable domain (eTLD+1). `http://localhost:3000` (frontend) and `http://localhost:8000` (API) share the exact same site (`localhost`), which allows the browser to send the `SameSite=Lax` session cookie on cross-origin asynchronous `fetch` requests between them. In contrast, `127.0.0.1` is treated as a different site from `localhost`. Accessing the frontend via `http://127.0.0.1:3000` or configuring the API as `http://127.0.0.1:8000` makes requests cross-site, causing browsers to refuse to attach or store the session cookie and immediately breaking authentication. Always use `http://localhost:3000` and `http://localhost:8000`.
+
+### Running Locally (Two Terminals)
+
+#### Terminal 1 — Backend
+```powershell
 cd backend
+# Create virtual environment if not already created
 python -m venv .venv
-.venv\Scripts\pip install -e ".[dev]"
-.venv\Scripts\alembic -c alembic.ini upgrade head
-.venv\Scripts\uvicorn app.main:app --reload   # http://localhost:8000/health
-.venv\Scripts\pytest tests\ -v
-.venv\Scripts\ruff check app/ tests/ alembic/
-.venv\Scripts\mypy app/ tests/ alembic/
-```
+.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
 
-### Frontend
-```bash
+# Ensure backend/.env exists and has SESSION_COOKIE_SECURE=false and CORS_ORIGINS=http://localhost:3000
+# Run database migrations to head
+alembic -c alembic.ini upgrade head
+
+# Start backend server on port 8000
+uvicorn app.main:app --port 8000 --reload
+```
+API is accessible at `http://localhost:8000` (health endpoint: `http://localhost:8000/health`).
+
+#### Terminal 2 — Frontend
+```powershell
 cd frontend
 npm install
-cp .env.example .env.local          # set NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-npm run dev                          # http://localhost:3000
+
+# Ensure frontend/.env.local contains NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+# (Copied from frontend/.env.example)
+cp .env.example .env.local
+
+# Start Next.js development server on port 3000
+npm run dev
+```
+Open your browser at `http://localhost:3000`.
+
+### Running Checks
+
+#### Backend checks (run from backend/):
+```powershell
+cd backend
+.venv\Scripts\pytest -q
+.venv\Scripts\ruff check app tests alembic
+.venv\Scripts\mypy app tests alembic
+```
+
+#### Frontend checks (run from frontend/):
+```powershell
+cd frontend
 npm run lint
 npm run type-check
+npm test
 npm run build
 ```
 
