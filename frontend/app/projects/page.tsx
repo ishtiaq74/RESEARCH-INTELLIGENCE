@@ -44,16 +44,48 @@ export default function ProjectsPage() {
   // Sign out state
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  // Clear all page state so previous user data is never retained in memory
+  // or shown when returning to this page (e.g. via Next.js Cache Components / React Activity).
+  const clearPageState = useCallback(() => {
+    setIsSigningOut(false);
+    setUser(null);
+    setProjects([]);
+    setNewProjectName("");
+    setCreateError(null);
+    setIsCreating(false);
+    setRenamingId(null);
+    setRenameValue("");
+    setRenameError(null);
+    setIsRenaming(false);
+    setDeletingId(null);
+    setDeleteError(null);
+    setIsDeleting(false);
+    setLoadError(null);
+    setPhase("loading");
+  }, []);
+
+  // Next 16 Cache Components preserves component state across navigations using React <Activity>.
+  // Reset transient interaction state when navigating away or unmounting.
+  useEffect(() => {
+    return () => {
+      setIsSigningOut(false);
+      setIsCreating(false);
+      setIsRenaming(false);
+      setIsDeleting(false);
+    };
+  }, []);
+
   // Note: This client-side guard is for UX only; the backend enforces access on all protected endpoints.
   const handleAuthError = useCallback(
     (err: unknown): boolean => {
       if (err instanceof ApiClientError && err.status === 401) {
+        clearPageState();
         router.push("/login");
         return true;
       }
       return false;
     },
-    [router]
+    [clearPageState, router]
   );
 
   const reloadData = useCallback(async () => {
@@ -118,6 +150,7 @@ export default function ProjectsPage() {
     } catch {
       // Regardless of network status, clear local UX and redirect to login
     } finally {
+      clearPageState();
       router.push("/login");
     }
   }

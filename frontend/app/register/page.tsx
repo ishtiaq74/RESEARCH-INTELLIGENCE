@@ -31,6 +31,13 @@ export default function RegisterPage() {
     };
   }, [router]);
 
+  // Clear sensitive password from memory when navigating away or unmounting
+  useEffect(() => {
+    return () => {
+      setPassword("");
+    };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -42,8 +49,10 @@ export default function RegisterPage() {
     }
 
     setIsSubmitting(true);
+    const submittedPassword = password;
+    setPassword("");
     try {
-      await register(email, password);
+      await register(email, submittedPassword);
       router.push("/projects");
     } catch (err) {
       if (err instanceof ApiClientError) {
