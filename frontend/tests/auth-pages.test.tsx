@@ -98,6 +98,29 @@ describe("Auth pages (Register & Login)", () => {
       });
     });
 
+    it("clears password field after submit", async () => {
+      vi.mocked(getMe).mockRejectedValue(
+        new ApiClientError("Not authenticated", 401)
+      );
+      vi.mocked(register).mockResolvedValue({
+        id: 1,
+        email: "newuser@example.com",
+      });
+
+      render(<RegisterPage />);
+
+      const pwdInput = screen.getByLabelText(/^password/i) as HTMLInputElement;
+      fireEvent.change(pwdInput, { target: { value: "validPassword123" } });
+      expect(pwdInput.value).toBe("validPassword123");
+
+      fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+      await waitFor(() => {
+        expect(register).toHaveBeenCalled();
+        expect(pwdInput.value).toBe("");
+      });
+    });
+
     it("displays error in aria-live region when registration fails with 409", async () => {
       vi.mocked(getMe).mockRejectedValue(
         new ApiClientError("Not authenticated", 401)
@@ -197,6 +220,29 @@ describe("Auth pages (Register & Login)", () => {
           "correctPassword123"
         );
         expect(mockPush).toHaveBeenCalledWith("/projects");
+      });
+    });
+
+    it("clears password field after submit", async () => {
+      vi.mocked(getMe).mockRejectedValue(
+        new ApiClientError("Not authenticated", 401)
+      );
+      vi.mocked(login).mockResolvedValue({
+        id: 1,
+        email: "user@example.com",
+      });
+
+      render(<LoginPage />);
+
+      const pwdInput = screen.getByLabelText(/^password/i) as HTMLInputElement;
+      fireEvent.change(pwdInput, { target: { value: "mySecretPassword123" } });
+      expect(pwdInput.value).toBe("mySecretPassword123");
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+      await waitFor(() => {
+        expect(login).toHaveBeenCalled();
+        expect(pwdInput.value).toBe("");
       });
     });
 

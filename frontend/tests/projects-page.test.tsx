@@ -323,4 +323,80 @@ describe("ProjectsPage", () => {
       expect(mockPush).toHaveBeenCalledWith("/login");
     });
   });
+
+  it("clears all page state on sign out and resets button to 'Sign out'", async () => {
+    vi.mocked(getMe).mockResolvedValue({
+      id: 1,
+      email: "alice@example.com",
+    });
+    vi.mocked(listProjects).mockResolvedValue([
+      {
+        id: 501,
+        name: "Alice's Secret Project",
+        owner_id: 1,
+        created_at: "2026-11-01T00:00:00Z",
+        updated_at: "2026-11-01T00:00:00Z",
+      },
+    ]);
+    vi.mocked(logout).mockResolvedValue(undefined);
+
+    render(<ProjectsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("alice@example.com")).toBeDefined();
+      expect(screen.getByText("Alice's Secret Project")).toBeDefined();
+    });
+
+    const signOutBtn = screen.getByRole("button", { name: /^sign out$/i });
+    fireEvent.click(signOutBtn);
+
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith("/login");
+      // State must be completely cleared
+      expect(screen.queryByText("alice@example.com")).toBeNull();
+      expect(screen.queryByText("Alice's Secret Project")).toBeNull();
+    });
+  });
+
+  it("displays 'Sign out' button label (never 'Signing out…') after remounting with a new user", async () => {
+    // 1. Initial user signs in
+    vi.mocked(getMe).mockResolvedValueOnce({
+      id: 1,
+      email: "alice@example.com",
+    });
+    vi.mocked(listProjects).mockResolvedValueOnce([]);
+    vi.mocked(logout).mockResolvedValue(undefined);
+
+    const { unmount } = render(<ProjectsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("alice@example.com")).toBeDefined();
+    });
+
+    // User signs out
+    fireEvent.click(screen.getByRole("button", { name: /^sign out$/i }));
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/login");
+    });
+
+    unmount();
+
+    // 2. New user signs in and visits /projects
+    vi.mocked(getMe).mockResolvedValueOnce({
+      id: 2,
+      email: "bob@example.com",
+    });
+    vi.mocked(listProjects).mockResolvedValueOnce([]);
+
+    render(<ProjectsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("bob@example.com")).toBeDefined();
+      // Button label must be 'Sign out', NOT 'Signing out…'
+      const btn = screen.getByRole("button", { name: /^sign out$/i });
+      expect(btn.textContent).toBe("Sign out");
+      expect(screen.queryByText("Signing out…")).toBeNull();
+    });
+  });
 });
