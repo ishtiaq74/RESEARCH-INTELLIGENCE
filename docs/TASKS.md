@@ -66,6 +66,7 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.3d Projects page (app/projects/page.tsx, projects.module.css, loading/empty/error/list states, create form with trimmed 1-100 char validation, inline rename, delete confirmation step, sign-out button, 401 redirect)
   - [x] T2.3e Component test suite (tests/auth-pages.test.tsx, tests/projects-page.test.tsx with mocked API client, 36 frontend tests passing)
   - [x] T2.3f Docs update (TASKS.md, HANDOFF.md with local setup instructions, SESSION_COOKIE_SECURE=false, localhost vs 127.0.0.1 explanation)
+  - [x] T2.3g Bug fix: clear page and auth state on sign-out and submit (reset isSigningOut in finally, wipe user/project data and reset phase to loading on sign-out to prevent Cache Components / React Activity state leakage across user sessions, clear password state after submit and unmount, 40 tests passing)
 - [ ] T2.4 Security and isolation review
 - [ ] T2.5 README and HANDOFF update; stop before merge
 Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.
