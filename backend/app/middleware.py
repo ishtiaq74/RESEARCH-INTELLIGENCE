@@ -1,6 +1,7 @@
 """Application middlewares for security, isolation, and error handling."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -8,6 +9,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.config import Settings, settings
+
+logger = logging.getLogger("app.errors")
 
 
 class OriginCheckMiddleware(BaseHTTPMiddleware):
@@ -48,3 +51,38 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
                     )
 
         return await call_next(request)
+
+
+class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+    """Catch unhandled exceptions, log the traceback, and return JSON 500 with CORS.
+
+    WHY AN INNER ERROR MIDDLEWARE:
+      Starlette's default ServerErrorMiddleware sits outside CORSMiddleware.
+      When an unhandled exception bubbles up to ServerErrorMiddleware, it generates
+      a plain 500 response that never passes through CORSMiddleware, omitting
+      the Access-Control-Allow-Origin header and causing the browser to report a
+      CORS error rather than an HTTP 500.
+      By catching unhandled exceptions inside CORSMiddleware, we:
+        1. Log the full traceback using standard logging (logger.exception).
+        2. Return a safe, uniform JSON 500 response {"detail": "Internal server error."}.
+        3. Never leak internal tracebacks to the client, even in debug mode.
+        4. Allow CORSMiddleware (which is outermost) to attach CORS headers so
+           the browser accurately receives and reports HTTP 500 to the client application.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        try:
+            return await call_next(request)
+        except Exception:
+            logger.exception(
+                "Unhandled server exception processing %s %s",
+                request.method,
+                request.url.path,
+            )
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error."},
+            )
+

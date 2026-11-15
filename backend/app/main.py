@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
 from app.config import settings as _default_settings
-from app.middleware import OriginCheckMiddleware
+from app.middleware import ErrorHandlingMiddleware, OriginCheckMiddleware
 from app.routers import auth, health, projects
 
 
@@ -44,8 +44,12 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     #   The auth endpoints use POST (/register, /login, /logout), and the
     #   projects endpoints use GET, POST, DELETE, and PATCH.
     # Starlette add_middleware wraps in reverse order (user_middleware.insert(0, ...)):
-    # Middlewares added later become OUTER. We register OriginCheckMiddleware first
-    # and CORSMiddleware last so that CORSMiddleware remains the outermost layer.
+    # Middlewares added later become OUTER.
+    # Order from inner to outer:
+    #   1. ErrorHandlingMiddleware (catches unhandled exceptions, returns JSON 500)
+    #   2. OriginCheckMiddleware (enforces allowed origins for state-changing methods)
+    #   3. CORSMiddleware (outermost: attaches CORS headers, handles preflight)
+    app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(OriginCheckMiddleware, settings=cfg)
 
     app.add_middleware(

@@ -23,7 +23,7 @@ config = context.config
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Import all models so their tables are registered on Base.metadata.
 # Alembic uses target_metadata to detect schema drift.
