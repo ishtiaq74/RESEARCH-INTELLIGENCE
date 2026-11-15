@@ -18,10 +18,15 @@ WHY GENERIC LOGIN ERROR:
   error reveals nothing.
 
 WHY RATE LIMITING IN-PROCESS:
-  A simple in-memory sliding-window limiter is proportionate for a local
-  single-user app.  Redis/Celery would be over-engineering.  The limiter tracks
-  failed attempts by email (lowercased) and blocks for a short backoff period.
-  It resets on a successful login.  It is NOT distributed — if the server
+  A fixed-window failure counter with lockout backoff is proportionate for a local
+  single-user app. Redis/Celery would be over-engineering. The limiter tracks failed
+  attempts per lowercased email within a fixed time window (_FAILURE_WINDOW_SECONDS,
+  default 15 minutes) starting at the first failed attempt. If the failure threshold
+  (_MAX_FAILED_ATTEMPTS, 10) is reached within that window, a lockout is imposed
+  until _LOCKOUT_SECONDS (60 seconds) in the future. If the window elapses before the
+  threshold is reached, or after a lockout expires, the failure counter resets.
+  Successful logins immediately clear the state. Expired entries are pruned whenever
+  the in-memory table exceeds 10,000 keys. It is NOT distributed — if the server
   restarts the counter resets — but for this use case that is acceptable.
 """
 from __future__ import annotations
@@ -70,16 +75,40 @@ def verify_password(password_hash: str, plaintext: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Time helper
+# ---------------------------------------------------------------------------
+
+
+def _now() -> datetime.datetime:
+    """Return the current UTC time. Helper for test monkeypatching."""
+    return datetime.datetime.now(datetime.UTC)
+
+
+# ---------------------------------------------------------------------------
 # In-process login rate limiter
 # ---------------------------------------------------------------------------
 
 _SESSION_DURATION_HOURS: int = 24
 _MAX_FAILED_ATTEMPTS: int = 10
 _LOCKOUT_SECONDS: int = 60
+_FAILURE_WINDOW_SECONDS: int = 900
+_MAX_RATE_LIMIT_ENTRIES: int = 10_000
 
-# State: {lowercased_email: (failed_count, lockout_until)}
-_rate_limit_state: dict[str, tuple[int, datetime.datetime | None]] = {}
+# State: {lowercased_email: (failed_count, window_start, lockout_until)}
+_rate_limit_state: dict[str, tuple[int, datetime.datetime, datetime.datetime | None]] = {}
 _rate_limit_lock = threading.Lock()
+
+
+def _prune_expired_locked(now: datetime.datetime) -> None:
+    """Prune expired entries from _rate_limit_state. Must be called with lock held."""
+    expired = [
+        em
+        for em, (count, window_start, until) in _rate_limit_state.items()
+        if (until is not None and now >= until)
+        or (until is None and (now - window_start).total_seconds() > _FAILURE_WINDOW_SECONDS)
+    ]
+    for em in expired:
+        _rate_limit_state.pop(em, None)
 
 
 def _is_locked_out(email: str) -> bool:
@@ -88,29 +117,44 @@ def _is_locked_out(email: str) -> bool:
         state = _rate_limit_state.get(email)
         if state is None:
             return False
-        count, until = state
-        if count < _MAX_FAILED_ATTEMPTS:
+        count, window_start, until = state
+        now = _now()
+        if until is not None:
+            if now < until:
+                return True
+            # Lockout has expired: clear this email's state so the counter restarts
+            _rate_limit_state.pop(email, None)
             return False
-        if until is None:
+
+        # Check if window expired without locking
+        if (now - window_start).total_seconds() > _FAILURE_WINDOW_SECONDS:
+            _rate_limit_state.pop(email, None)
             return False
-        now = datetime.datetime.now(datetime.UTC)
-        if now < until:
-            return True
-        # Lockout has expired: clear this email's state so the counter restarts
-        _rate_limit_state.pop(email, None)
+
         return False
 
 
 def _record_failed(email: str) -> None:
     with _rate_limit_lock:
-        state = _rate_limit_state.get(email, (0, None))
-        count = state[0] + 1
-        until: datetime.datetime | None = None
+        now = _now()
+        if len(_rate_limit_state) > _MAX_RATE_LIMIT_ENTRIES:
+            _prune_expired_locked(now)
+
+        state = _rate_limit_state.get(email)
+        if state is None or (now - state[1]).total_seconds() > _FAILURE_WINDOW_SECONDS:
+            # First failure in a new window
+            count = 1
+            window_start = now
+            until: datetime.datetime | None = None
+        else:
+            count = state[0] + 1
+            window_start = state[1]
+            until = state[2]
+
         if count >= _MAX_FAILED_ATTEMPTS:
-            until = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-                seconds=_LOCKOUT_SECONDS
-            )
-        _rate_limit_state[email] = (count, until)
+            until = now + datetime.timedelta(seconds=_LOCKOUT_SECONDS)
+
+        _rate_limit_state[email] = (count, window_start, until)
 
 
 def _record_success(email: str) -> None:
@@ -221,7 +265,7 @@ def start_session(db: Session, user: User) -> str:
     Does not verify passwords and does not interact with the rate limiter.
     """
     raw_token = secrets.token_urlsafe(32)
-    expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+    expires_at = _now() + datetime.timedelta(
         hours=_SESSION_DURATION_HOURS
     )
     repositories.create_session(
@@ -252,7 +296,7 @@ def get_current_user(db: Session, token: str | None) -> User | None:
         return None
 
     # Normalise: both timezone-aware comparison
-    now = datetime.datetime.now(datetime.UTC)
+    now = _now()
     expires = session.expires_at
     # SQLite stores datetimes without timezone; treat as UTC
     if expires.tzinfo is None:

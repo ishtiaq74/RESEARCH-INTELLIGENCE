@@ -607,12 +607,7 @@ def test_rate_limiter_lockout_expiry_resets_counter(
     now = datetime.datetime.now(datetime.UTC)
     future_time = now + datetime.timedelta(seconds=65)
 
-    class MockDateTime:
-        @classmethod
-        def now(cls, tz: datetime.tzinfo | None = None) -> datetime.datetime:
-            return future_time
-
-    monkeypatch.setattr("app.services.auth_service.datetime.datetime", MockDateTime)
+    monkeypatch.setattr("app.services.auth_service._now", lambda: future_time)
 
     # Next attempt with wrong password should fail with 401 (not 429)
     res_post_expiry = client.post(
@@ -625,3 +620,92 @@ def test_rate_limiter_lockout_expiry_resets_counter(
     # Subsequent attempt with correct password succeeds (counter restarted at 1)
     res_check = client.post("/auth/login", json={"email": email, "password": pwd})
     assert res_check.status_code == 200
+
+
+def test_rate_limiter_failures_spread_beyond_window_do_not_lock(
+    db_and_client: tuple[Session, TestClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Failures occurring across multiple time windows do not accumulate into a lockout."""
+    db, client = db_and_client
+    email = "window_spread@example.com"
+    pwd = "password123"
+
+    client.post("/auth/register", json={"email": email, "password": pwd})
+    client.cookies.clear()
+
+    base_time = datetime.datetime.now(datetime.UTC)
+    current_time = base_time
+
+    monkeypatch.setattr("app.services.auth_service._now", lambda: current_time)
+
+    # 6 failed attempts in window 1
+    for _ in range(6):
+        res = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+        assert res.status_code == 401
+
+    # Advance time past _FAILURE_WINDOW_SECONDS (900s) by 910 seconds
+    current_time = base_time + datetime.timedelta(seconds=910)
+
+    # 6 more failed attempts in window 2
+    for _ in range(6):
+        res = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+        assert res.status_code == 401
+
+    # Still not locked (total 12 attempts, but only 6 in current window)
+    res_check = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+    assert res_check.status_code == 401
+
+
+def test_rate_limiter_success_clears_state(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """A successful login immediately clears failed attempt state for that email."""
+    from app.services.auth_service import _rate_limit_state
+
+    db, client = db_and_client
+    email = "clears_state@example.com"
+    pwd = "correct_password"
+
+    client.post("/auth/register", json={"email": email, "password": pwd})
+    client.cookies.clear()
+
+    for _ in range(5):
+        res = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+        assert res.status_code == 401
+
+    assert email in _rate_limit_state
+
+    res_ok = client.post("/auth/login", json={"email": email, "password": pwd})
+    assert res_ok.status_code == 200
+    assert email not in _rate_limit_state
+
+
+def test_rate_limiter_pruning_works(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """When _rate_limit_state exceeds 10,000 keys, expired entries are pruned."""
+    from app.services.auth_service import _MAX_RATE_LIMIT_ENTRIES, _rate_limit_state
+
+    db, client = db_and_client
+    email = "trigger_prune@example.com"
+    pwd = "password123"
+
+    client.post("/auth/register", json={"email": email, "password": pwd})
+    client.cookies.clear()
+
+    # Pre-populate _rate_limit_state with 10,005 expired entries (older than 900s)
+    old_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=1200)
+    for i in range(_MAX_RATE_LIMIT_ENTRIES + 5):
+        _rate_limit_state[f"stale_{i}@example.com"] = (1, old_time, None)
+
+    assert len(_rate_limit_state) > _MAX_RATE_LIMIT_ENTRIES
+
+    # One failed attempt triggers _record_failed which prunes expired entries
+    res = client.post("/auth/login", json={"email": email, "password": "wrong_password"})
+    assert res.status_code == 401
+
+    # Stale entries must have been pruned; only the active failure remains
+    assert len(_rate_limit_state) == 1
+    assert email in _rate_limit_state
+
