@@ -68,7 +68,10 @@ export async function apiRequest<T>(
   }
 
   const headers = new Headers(customHeaders);
-  if (fetchOptions.body && !headers.has("Content-Type")) {
+  if (
+    typeof fetchOptions.body === "string" &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
 

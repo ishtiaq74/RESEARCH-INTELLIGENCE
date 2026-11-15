@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ApiClientError,
+  apiRequest,
   createProject,
   deleteProject,
   getMe,
@@ -189,6 +190,49 @@ describe("API client module", () => {
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toContain("/projects/12");
     expect(options.method).toBe("DELETE");
+  });
+
+  describe("Content-Type header handling", () => {
+    it("sets Content-Type: application/json when body is a string and no header is provided", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      });
+      global.fetch = fetchMock;
+
+      await apiRequest("/test-endpoint", {
+        method: "POST",
+        body: JSON.stringify({ key: "value" }),
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [, options] = fetchMock.mock.calls[0];
+      const headers = options.headers as Headers;
+      expect(headers.get("Content-Type")).toBe("application/json");
+    });
+
+    it("does not set Content-Type header when body is FormData", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      });
+      global.fetch = fetchMock;
+
+      const formData = new FormData();
+      formData.append("file", "dummy-content");
+
+      await apiRequest("/test-upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [, options] = fetchMock.mock.calls[0];
+      const headers = options.headers as Headers;
+      expect(headers.get("Content-Type")).toBeNull();
+    });
   });
 
   describe("error handling and status code mapping", () => {
