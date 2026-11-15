@@ -387,6 +387,52 @@ def test_expired_session_returns_401(
     assert db.query(SessionModel).count() == 0, "Expired session row must be deleted from DB"
 
 
+def test_login_prunes_expired_sessions(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Successful login calls delete_expired_sessions and removes stale session rows."""
+    db, client = db_and_client
+    # Register user 1
+    client.post(
+        "/auth/register",
+        json={"email": "old_user@example.com", "password": "password123"},
+    )
+    client.cookies.clear()
+
+    # Expire user 1's session by setting expires_at to 2 hours ago
+    past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2)
+    db.query(SessionModel).update({"expires_at": past})
+    db.commit()
+
+    assert db.query(SessionModel).count() == 1
+
+    # Register user 2
+    client.post(
+        "/auth/register",
+        json={"email": "new_user@example.com", "password": "password123"},
+    )
+    client.cookies.clear()
+
+    # At this point: 1 expired session (user 1) + 1 valid session (user 2) = 2 sessions
+    assert db.query(SessionModel).count() == 2
+
+    # Now user 2 logs in
+    login_resp = client.post(
+        "/auth/login",
+        json={"email": "new_user@example.com", "password": "password123"},
+    )
+    assert login_resp.status_code == 200
+
+    # The login should have cleaned up the expired session from user 1
+    now = datetime.datetime.now(datetime.UTC)
+    expired_rows = (
+        db.query(SessionModel)
+        .filter(SessionModel.expires_at < now)
+        .all()
+    )
+    assert len(expired_rows) == 0
+
+
 # ---------------------------------------------------------------------------
 # Session cookie Secure flag tests (T2.1 Step 1)
 # ---------------------------------------------------------------------------

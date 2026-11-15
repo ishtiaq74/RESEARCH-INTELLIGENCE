@@ -253,6 +253,7 @@ def login(db: Session, email: str, password: str) -> tuple[User, str]:
         raise AuthError("Invalid email or password.", status_code=401)
 
     _record_success(email)
+    repositories.delete_expired_sessions(db)
     raw_token = start_session(db, user)
     return user, raw_token
 
