@@ -67,7 +67,18 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.3e Component test suite (tests/auth-pages.test.tsx, tests/projects-page.test.tsx with mocked API client, 36 frontend tests passing)
   - [x] T2.3f Docs update (TASKS.md, HANDOFF.md with local setup instructions, SESSION_COOKIE_SECURE=false, localhost vs 127.0.0.1 explanation)
   - [x] T2.3g Bug fix: clear page and auth state on sign-out and submit (reset isSigningOut in finally, wipe user/project data and reset phase to loading on sign-out to prevent Cache Components / React Activity state leakage across user sessions, clear password state after submit and unmount, 40 tests passing)
-- [ ] T2.4 Security and isolation review
+- [x] T2.4 Security and isolation review & hardening batch
+  - [x] T2.4a Security review and vulnerability analysis (UNVERIFIED findings investigated and verified)
+  - [x] T2.4b Step 1: Integer bounds (project_id Path bounded to 1 <= id <= 2**63 - 1, offset capped at 1_000_000, returns 422)
+  - [x] T2.4c Step 2: Origin check middleware (OriginCheckMiddleware blocks disallowed origins on POST, PUT, PATCH, DELETE with 403)
+  - [x] T2.4d Step 3: Unhandled errors (ErrorHandlingMiddleware catches exceptions, logs traceback, returns JSON 500 with CORS headers)
+  - [x] T2.4e Step 4: Rate limiter (15-minute failure window, 10,000-key table pruning, _now helper for testing, accurate docstring)
+  - [x] T2.4f Step 5: Expired sessions (delete_expired_sessions called on successful login, old expired rows pruned)
+  - [x] T2.4g Step 6: Cache-Control (CacheControlMiddleware sets Cache-Control: no-store on /auth and /projects)
+  - [x] T2.4h Step 7: Config validation (CORS origins validated for http/https scheme, no trailing slash, no path/query; startup warning on insecure cookie with non-localhost)
+  - [x] T2.4i Step 8: Docs accuracy (CSRF section in dependencies.py rewritten with correct SameSite=Lax, CORS, and origin explanations)
+  - [x] T2.4j Step 9: Frontend Content-Type (apiRequest sets application/json only for string bodies, never for FormData; 42 frontend tests passing)
+  - [x] T2.4k Step 10: Docs update (DECISIONS_LOG.md Known limitations updated, TASKS.md and HANDOFF.md updated)
 - [ ] T2.5 README and HANDOFF update; stop before merge
 Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.
 
