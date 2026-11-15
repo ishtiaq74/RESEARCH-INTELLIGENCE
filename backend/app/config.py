@@ -1,10 +1,14 @@
 """Application configuration loaded from environment variables."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger("app.config")
 
 BACKEND_DIR: Path = Path(__file__).resolve().parent.parent
 DATA_DIR: Path = BACKEND_DIR / "data"
@@ -42,20 +46,61 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins")
     @classmethod
-    def cors_origins_no_wildcard(cls, v: str) -> str:
-        """Reject wildcard or empty CORS origins at startup."""
+    def cors_origins_validate(cls, v: str) -> str:
+        """Validate CORS origins: explicit, http/https, no trailing slash, no path or query."""
         origins = [o.strip() for o in v.split(",") if o.strip()]
         if not origins:
             raise ValueError(
                 "CORS_ORIGINS must not be empty. "
                 "Provide at least one explicit origin, e.g. 'http://localhost:3000'."
             )
-        if "*" in origins:
-            raise ValueError(
-                "CORS_ORIGINS must not contain the wildcard '*'. "
-                "List explicit origins instead."
-            )
+        for origin in origins:
+            if "*" in origin:
+                raise ValueError(
+                    "CORS_ORIGINS must not contain the wildcard '*'. "
+                    "List explicit origins instead."
+                )
+            if not (origin.startswith("http://") or origin.startswith("https://")):
+                raise ValueError(
+                    f"CORS origin '{origin}' must start with 'http://' or 'https://'."
+                )
+            if origin.endswith("/"):
+                raise ValueError(
+                    f"CORS origin '{origin}' must not have a trailing slash."
+                )
+            parsed = urlsplit(origin)
+            if not parsed.netloc:
+                raise ValueError(
+                    f"CORS origin '{origin}' is missing a valid host/domain."
+                )
+            if parsed.path:
+                raise ValueError(
+                    f"CORS origin '{origin}' must not include a path."
+                )
+            if parsed.query:
+                raise ValueError(
+                    f"CORS origin '{origin}' must not include a query string."
+                )
+            if parsed.fragment:
+                raise ValueError(
+                    f"CORS origin '{origin}' must not include a fragment."
+                )
         return v
+
+    @model_validator(mode="after")
+    def warn_insecure_cookie_non_localhost(self) -> Settings:
+        """Warn when session_cookie_secure is false and origin host is not localhost."""
+        if not self.session_cookie_secure:
+            for origin in self.cors_origins_list:
+                parsed = urlsplit(origin)
+                if parsed.hostname != "localhost":
+                    logger.warning(
+                        "SESSION_COOKIE_SECURE is False, but CORS origin '%s' host is "
+                        "not localhost. Plain HTTP cookies to non-localhost origins may be "
+                        "intercepted or rejected by browsers.",
+                        origin,
+                    )
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

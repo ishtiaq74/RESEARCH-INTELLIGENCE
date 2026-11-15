@@ -24,6 +24,8 @@ Tests:
 """
 from __future__ import annotations
 
+import logging
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -65,6 +67,66 @@ def test_empty_cors_origins_raises() -> None:
     """Settings must reject an empty CORS origins string."""
     with pytest.raises(Exception, match=r"empty"):
         Settings(cors_origins="  ,  ")
+
+
+def test_valid_cors_origins_accepted() -> None:
+    """Valid http and https origins without trailing slash or path are accepted."""
+    s = Settings(cors_origins="http://localhost:3000,https://app.example.com")
+    assert s.cors_origins_list == ["http://localhost:3000", "https://app.example.com"]
+
+
+def test_trailing_slash_origin_raises() -> None:
+    """CORS origin with trailing slash must be rejected."""
+    with pytest.raises(Exception, match=r"trailing slash"):
+        Settings(cors_origins="http://localhost:3000/")
+
+
+def test_path_in_origin_raises() -> None:
+    """CORS origin with a path must be rejected."""
+    with pytest.raises(Exception, match=r"path"):
+        Settings(cors_origins="http://localhost:3000/api")
+
+
+def test_missing_scheme_origin_raises() -> None:
+    """CORS origin without http:// or https:// must be rejected."""
+    with pytest.raises(Exception, match=r"http://"):
+        Settings(cors_origins="localhost:3000")
+
+
+def test_insecure_cookie_non_localhost_origin_logs_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When session_cookie_secure is False and origin is non-localhost, warn at startup."""
+    caplog.set_level(logging.WARNING, logger="app.config")
+
+    # Non-localhost host with session_cookie_secure=False must log a warning
+    Settings(cors_origins="http://remote.example.com", session_cookie_secure=False)
+    assert any(
+        record.levelno >= logging.WARNING
+        and "not localhost" in record.message
+        for record in caplog.records
+    )
+
+    caplog.clear()
+
+    # Localhost host with session_cookie_secure=False must NOT log a warning
+    Settings(cors_origins="http://localhost:3000", session_cookie_secure=False)
+    assert not any(
+        record.levelno >= logging.WARNING
+        and "not localhost" in record.message
+        for record in caplog.records
+    )
+
+    caplog.clear()
+
+    # Non-localhost host with session_cookie_secure=True must NOT log a warning
+    Settings(cors_origins="https://remote.example.com", session_cookie_secure=True)
+    assert not any(
+        record.levelno >= logging.WARNING
+        and "not localhost" in record.message
+        for record in caplog.records
+    )
+
 
 
 # ---------------------------------------------------------------------------
