@@ -6,7 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
 from app.config import settings as _default_settings
-from app.middleware import ErrorHandlingMiddleware, OriginCheckMiddleware
+from app.middleware import (
+    CacheControlMiddleware,
+    ErrorHandlingMiddleware,
+    OriginCheckMiddleware,
+)
 from app.routers import auth, health, projects
 
 
@@ -48,9 +52,11 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     # Order from inner to outer:
     #   1. ErrorHandlingMiddleware (catches unhandled exceptions, returns JSON 500)
     #   2. OriginCheckMiddleware (enforces allowed origins for state-changing methods)
-    #   3. CORSMiddleware (outermost: attaches CORS headers, handles preflight)
+    #   3. CacheControlMiddleware (sets Cache-Control: no-store on /auth and /projects)
+    #   4. CORSMiddleware (outermost: attaches CORS headers, handles preflight)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(OriginCheckMiddleware, settings=cfg)
+    app.add_middleware(CacheControlMiddleware)
 
     app.add_middleware(
         CORSMiddleware,

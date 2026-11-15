@@ -86,3 +86,25 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Internal server error."},
             )
 
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """Ensure sensitive authentication and user data endpoints are never cached.
+
+    WHY NO-STORE ON /auth AND /projects:
+      Responses containing user information, session state, project metadata,
+      and authentication errors contain sensitive user-specific data that must
+      never be cached by shared proxies, CDNs, or browser caches.
+      Setting Cache-Control: no-store instructs clients and intermediaries
+      never to store or reuse these responses.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/auth") or path.startswith("/projects"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+
