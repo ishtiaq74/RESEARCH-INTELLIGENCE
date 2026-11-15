@@ -41,11 +41,12 @@ python -m venv .venv
 # 3. Install the package and all dependencies
 pip install -e ".[dev]"
 
-# 4. (Optional) Copy the env template
-#    The backend works without a .env file; defaults are safe for local dev.
+# 4. Copy the env template
+#    backend/.env needs SESSION_COOKIE_SECURE=false for local HTTP.
 Copy-Item .env.example .env
 
 # 5. Apply database migrations  — creates backend\data\app.db
+#    Run alembic upgrade head in backend/ after pulling new migrations.
 alembic -c alembic.ini upgrade head
 
 # 6. Start the backend
@@ -57,6 +58,8 @@ uvicorn app.main:app --port 8000
 
 > **If you see "uvicorn is not recognized":** the virtual environment is not active.  
 > Run `.venv\Scripts\Activate.ps1` first. Your prompt should show `(.venv)` before you proceed.
+
+> **Host note:** Always use `localhost`, not `127.0.0.1`, for both backend and frontend (mixing them breaks session cookies and Origin checks).
 
 ### Alembic: which folder to run from
 

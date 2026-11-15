@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T2.3 done, ready for T2.4)
+Last updated by: Antigravity (T2 complete, ready for T3)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -37,13 +37,15 @@ Last updated by: Antigravity (T2.3 done, ready for T2.4)
 - T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
 - T2.1 Backend auth: **done** — email + password auth, server-side sessions in SQLite, Alembic migration with foreign keys and batch mode, CORS credentials enabled with explicit origins, Argon2id hashing, in-process rate limiting, and all security fixes completed (SESSION_COOKIE_SECURE setting, dummy hash constant, start_session split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset). 55 backend tests passing, ruff and mypy clean.
 - T2.2 Projects backend: **done** — projects table with owner_id FK (CASCADE), index, timestamps; project_repository scoping every query by owner_id and id; project_service layer enforcing ownership, name rules (strip whitespace, 1-100 chars), and raising identical ProjectNotFoundError (404) for missing and cross-user projects; router calling only service; pagination (limit 50 default, max 100 via Query le=100 returning 422, offset >= 0, id ascending); ProjectResponse using real datetime fields with model_validate (from_orm_model and all type: ignore removed); CORS updated to remove expose_headers=["set-cookie"] per WHATWG Fetch standard; dynamic ScriptDirectory head/parent lookups in migration tests; 99 passing tests, ruff and mypy clean.
-- T2.3 Frontend auth & projects: **done** — Vitest 4.1.12 + React Testing Library 16.3.3 + jsdom test runner configured; single typed API client (`frontend/lib/api.ts`) using `fetch` with `credentials: "include"`, zero storage of tokens in localStorage/sessionStorage, centralized error mapping; sign-up page (`/register`) and sign-in page (`/login`) with client-side hints (8-128 chars), disabled submit buttons, aria-live regions, and client-side GET `/auth/me` guard; projects page (`/projects`) with loading, empty, error, and list states, project creation (name trimmed, 1-100 chars), inline rename, delete confirmation step, sign-out button, and 401 redirect to sign-in; 40 passing frontend tests; bug fix completed for sign-out button and state retention across account switches; lint and type-check clean; production build verified.
+- T2.3 Frontend auth & projects: **done** — Vitest 4.1.12 + React Testing Library 16.3.3 + jsdom test runner configured; single typed API client (`frontend/lib/api.ts`) using `fetch` with `credentials: "include"`, zero storage of tokens in localStorage/sessionStorage, centralized error mapping; sign-up page (`/register`) and sign-in page (`/login`) with client-side hints (8-128 chars), disabled submit buttons, aria-live regions, and client-side GET `/auth/me` guard; projects page (`/projects`) with loading, empty, error, and list states, project creation (name trimmed, 1-100 chars), inline rename, delete confirmation step, sign-out button, and 401 redirect to sign-in; 42 passing frontend tests; bug fix completed for sign-out button and state retention across account switches; lint and type-check clean; production build verified.
+- T2.4 Security review & hardening: **done** — security review completed (docs/reviews/T2.4-security-review.md); hardening batch implemented (integer bounds validation returning 422, Origin check middleware returning 403 on untrusted mutating requests, generic unhandled error handler returning JSON 500 with CORS headers, no-store Cache-Control header middleware, rate limiter cleanup and rolling window, CORS origin format validation). 123 backend and 42 frontend tests passing, ruff and mypy clean, npm test/lint/type-check/build clean.
+- T2.5 Docs & handoff: **done** — TASKS claims corrected, README setup notes verified, end-of-T2 handoff recorded.
 
 ## In progress
-None (T2.3 complete; stopped before merge).
+None (T2 complete; ready for owner merge).
 
 ## Next step
-Proceed to T2.4 Security and isolation review.
+Proceed to T3 Secure PDF upload and storage.
 
 ## Known behaviour
 - Next.js 16 Cache Components and preserved page state: With `cacheComponents: true` enabled in `next.config.ts`, Next.js 16 caches up to 3 recently visited routes in memory using React's `<Activity mode="hidden">` instead of unmounting them when navigating away. Component `useState`, form input values, and DOM states are kept alive. While this provides instant back/forward navigation and preserves user input, any state not explicitly reset persists across client-side navigations. On sign-out, all user profile data, project lists, and form inputs must be cleared explicitly, and transient states must be reset in cleanup effects, so switching accounts in the same browser tab starts strictly from the loading state and never renders previous user data.
@@ -125,3 +127,11 @@ npm run build
 
 ## Update rule
 After every sub-step, update this file: Current state, In progress, Next step, Known problems.
+
+## State at end of T2 (auth and projects)
+- Done: email+password auth with server-side sessions, projects CRUD with per-user ownership, sign-up/sign-in/projects pages, hardening batch (Origin check, JSON 500 handler, no-store headers, windowed rate limiter, CORS origin validation). 123 backend and 42 frontend tests.
+- Middleware order, inner to outer: ErrorHandling, OriginCheck, CacheControl, CORS (outermost).
+- Local setup: backend/.env needs SESSION_COOKIE_SECURE=false. Use http://localhost:3000 and http://localhost:8000, never 127.0.0.1 (different site, and the Origin check will return 403). After pulling, run `alembic upgrade head` in backend/ because the dev database does not migrate itself (an old dev database made /projects crash with a missing table).
+- Checks (run from backend/): pytest -q, ruff check app tests alembic, mypy app tests alembic. From frontend/: npm run lint, npm run type-check, npm test, npm run build.
+- Known limitations are in DECISIONS_LOG.md. Before T4: move db.commit() from repositories to the service layer so ingestion can be atomic.
+- Next: T3 secure PDF upload. api.ts already skips the JSON Content-Type for FormData bodies. If streaming uploads or answers misbehave, suspect the BaseHTTPMiddleware layers first.

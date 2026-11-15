@@ -43,7 +43,7 @@ Acceptance: fresh clone runs from README; /health OK and shown in UI; migration 
   - [x] T1.5e Write docs/DEPENDENCY_AUDIT.md and stop before merge
   - [x] T1.5f Correct DEPENDENCY_AUDIT.md (raw severities, owner upgrade note, braces *, prod claims, watch list)
 
-## T2 Auth and projects — status: in-progress
+## T2 Auth and projects — status: done
 Goal: users can register, sign in and own private projects. No other user can see them.
 - [x] T2.1 Backend auth (email + password, server-side sessions in SQLite, Alembic migration, CORS adjusted for cookies)
   - [x] T2.1a Users and sessions schema + Alembic migration with foreign keys and SQLite batch mode
@@ -68,7 +68,7 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.3f Docs update (TASKS.md, HANDOFF.md with local setup instructions, SESSION_COOKIE_SECURE=false, localhost vs 127.0.0.1 explanation)
   - [x] T2.3g Bug fix: clear page and auth state on sign-out and submit (reset isSigningOut in finally, wipe user/project data and reset phase to loading on sign-out to prevent Cache Components / React Activity state leakage across user sessions, clear password state after submit and unmount, 40 tests passing)
 - [x] T2.4 Security and isolation review & hardening batch
-  - [x] T2.4a Security review and vulnerability analysis (UNVERIFIED findings investigated and verified)
+  - [x] T2.4a Security review and vulnerability analysis (Security review completed by the architect; integer bounds and the JSON 500 / CORS behaviour are covered by automated tests (test_huge_integer_bounds_returns_422, test_unhandled_error_returns_json_500_with_cors_headers))
   - [x] T2.4b Step 1: Integer bounds (project_id Path bounded to 1 <= id <= 2**63 - 1, offset capped at 1_000_000, returns 422)
   - [x] T2.4c Step 2: Origin check middleware (OriginCheckMiddleware blocks disallowed origins on POST, PUT, PATCH, DELETE with 403)
   - [x] T2.4d Step 3: Unhandled errors (ErrorHandlingMiddleware catches exceptions, logs traceback, returns JSON 500 with CORS headers)
@@ -78,8 +78,8 @@ Goal: users can register, sign in and own private projects. No other user can se
   - [x] T2.4h Step 7: Config validation (CORS origins validated for http/https scheme, no trailing slash, no path/query; startup warning on insecure cookie with non-localhost)
   - [x] T2.4i Step 8: Docs accuracy (CSRF section in dependencies.py rewritten with correct SameSite=Lax, CORS, and origin explanations)
   - [x] T2.4j Step 9: Frontend Content-Type (apiRequest sets application/json only for string bodies, never for FormData; 42 frontend tests passing)
-  - [x] T2.4k Step 10: Docs update (DECISIONS_LOG.md Known limitations updated, TASKS.md and HANDOFF.md updated)
-- [ ] T2.5 README and HANDOFF update; stop before merge
+  - [x] T2.4k Step 10: Docs update (DECISIONS_LOG.md Known limitations updated, TASKS.md updated; HANDOFF.md moves to T2.5)
+- [x] T2.5 HANDOFF.md state-at-end-of-T2 section added and README setup notes checked
 Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.
 
 ## T3 Secure PDF upload and storage — todo
