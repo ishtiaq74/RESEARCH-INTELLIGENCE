@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -60,6 +60,10 @@ class ProjectResponse(BaseModel):
     updated_at: datetime.datetime
 
 
+_MAX_SQLITE_INT: int = 2**63 - 1
+_MAX_OFFSET: int = 1_000_000
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -89,7 +93,7 @@ def create(
 @router.get("", response_model=list[ProjectResponse])
 def list_all(
     limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=_MAX_OFFSET),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ) -> list[ProjectResponse]:
@@ -105,7 +109,7 @@ def list_all(
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_one(
-    project_id: int,
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ) -> ProjectResponse:
@@ -125,8 +129,8 @@ def get_one(
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
 def update(
-    project_id: int,
     body: UpdateProjectRequest,
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ) -> ProjectResponse:
@@ -149,7 +153,7 @@ def update(
 
 @router.delete("/{project_id}", status_code=204)
 def delete(
-    project_id: int,
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ) -> None:

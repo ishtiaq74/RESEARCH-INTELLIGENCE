@@ -24,6 +24,7 @@ from app.repositories import project_repository
 
 _MIN_PROJECT_NAME_LENGTH: int = 1
 _MAX_PROJECT_NAME_LENGTH: int = 100
+_MAX_OFFSET: int = 1_000_000
 
 
 class ProjectError(Exception):
@@ -77,8 +78,10 @@ def list_projects(
     """Return projects owned by owner_id with pagination."""
     if limit < 1 or limit > 100:
         raise ProjectError("Limit must be between 1 and 100.", status_code=422)
-    if offset < 0:
-        raise ProjectError("Offset must be non-negative.", status_code=422)
+    if offset < 0 or offset > _MAX_OFFSET:
+        raise ProjectError(
+            f"Offset must be between 0 and {_MAX_OFFSET}.", status_code=422
+        )
     return project_repository.list_projects(
         db, owner_id=owner_id, limit=limit, offset=offset
     )

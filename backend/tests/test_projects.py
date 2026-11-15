@@ -859,3 +859,28 @@ def test_delete_other_users_project_returns_404(
     _login(client, "alice@example.com")
     still_there = client.get(f"/projects/{alice_project['id']}")
     assert still_there.status_code == 200
+
+
+def test_huge_integer_bounds_returns_422(
+    db_and_client: tuple[Session, TestClient],
+) -> None:
+    """Huge integers exceeding SQLite 64-bit int bounds or offset limits return 422."""
+    db, client = db_and_client
+    _register_and_login(client, "alice@example.com")
+    safe_client = TestClient(client.app, raise_server_exceptions=False, cookies=client.cookies)
+
+    huge_id = 99999999999999999999
+    r_get = safe_client.get(f"/projects/{huge_id}")
+    r_patch = safe_client.patch(f"/projects/{huge_id}", json={"name": "New Name"})
+    r_delete = safe_client.delete(f"/projects/{huge_id}")
+    r_offset = safe_client.get(f"/projects?offset={huge_id}")
+
+    assert r_get.status_code == 422
+    assert r_patch.status_code == 422
+    assert r_delete.status_code == 422
+    assert r_offset.status_code == 422
+
+    # Also test offset exceeding _MAX_OFFSET (1_000_001)
+    r_offset_over = safe_client.get("/projects?offset=1000001")
+    assert r_offset_over.status_code == 422
+
