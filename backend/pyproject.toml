@@ -9,6 +9,16 @@ dependencies = [
     "pydantic-settings==2.16.0",
     "sqlalchemy==2.1.6",
     "alembic==1.20.1",
+    # T2 Auth: password hashing
+    # argon2-cffi: OWASP-recommended Argon2id password hashing.
+    # Chosen over bcrypt (72-byte limit) and scrypt (less library support).
+    # MIT licensed, no paid component.
+    "argon2-cffi==25.1.0",
+    # T2 Auth: email validation for Pydantic EmailStr in request schemas
+    # email-validator: validates and normalises email addresses at the
+    # Pydantic layer before they reach service/repository code.
+    # BSD-2 licensed, no paid component.
+    "email-validator==2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +43,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    # FastAPI uses Depends(), Cookie(), etc. in function default arguments.
+    # This is the required pattern for FastAPI dependency injection; B008 is a false positive here.
+    "B008",
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -40,4 +55,3 @@ strict = true
 plugins = ["pydantic.mypy"]
 warn_return_any = true
 warn_unused_configs = true
-

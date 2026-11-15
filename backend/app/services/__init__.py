@@ -1,1 +1,30 @@
-# services package — business logic goes here (added in T2+)
+"""Services package — business logic."""
+from app.services.auth_service import (
+    AuthError,
+    get_current_user,
+    hash_password,
+    login,
+    logout,
+    register,
+    reset_rate_limiter,
+    start_session,
+    verify_password,
+)
+from app.services.project_service import (
+    ProjectError,
+    ProjectNotFoundError,
+)
+
+__all__ = [
+    "AuthError",
+    "ProjectError",
+    "ProjectNotFoundError",
+    "get_current_user",
+    "hash_password",
+    "login",
+    "logout",
+    "register",
+    "reset_rate_limiter",
+    "start_session",
+    "verify_password",
+]

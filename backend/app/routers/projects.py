@@ -1,0 +1,170 @@
+"""Projects router: CRUD endpoints for research projects.
+
+All endpoints require authentication (require_current_user dependency).
+All data access goes through project_repository, which always filters by
+owner_id so one user can never see or modify another user's projects.
+
+Routes
+------
+POST   /projects           — create a project
+GET    /projects           — list the caller's projects
+GET    /projects/{id}      — get one project (404 if not found or not owned)
+PATCH  /projects/{id}      — rename a project (404 if not found or not owned)
+DELETE /projects/{id}      — delete a project (404 if not found or not owned)
+
+WHY 404 INSTEAD OF 403 FOR CROSS-USER ACCESS:
+  Returning 403 on a project owned by another user would reveal that the
+  project exists.  Returning 404 hides that information — the caller cannot
+  distinguish "project does not exist" from "project belongs to someone else".
+"""
+from __future__ import annotations
+
+import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.dependencies import require_current_user
+from app.models.user import User
+from app.services import project_service
+
+router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+# ---------------------------------------------------------------------------
+# Request / response schemas
+# ---------------------------------------------------------------------------
+
+
+class CreateProjectRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class UpdateProjectRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    owner_id: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+_MAX_SQLITE_INT: int = 2**63 - 1
+_MAX_OFFSET: int = 1_000_000
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("", response_model=ProjectResponse, status_code=201)
+def create(
+    body: CreateProjectRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+) -> ProjectResponse:
+    """Create a new project owned by the current user.
+
+    Returns 201 with the created project on success.
+    Returns 401 if not authenticated.
+    Returns 422 if name is invalid.
+    """
+    try:
+        project = project_service.create_project(
+            db, owner_id=current_user.id, name=body.name
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.get("", response_model=list[ProjectResponse])
+def list_all(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=_MAX_OFFSET),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+) -> list[ProjectResponse]:
+    """Return all projects owned by the current user (ordered by id ascending)."""
+    try:
+        projects = project_service.list_projects(
+            db, owner_id=current_user.id, limit=limit, offset=offset
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return [ProjectResponse.model_validate(p) for p in projects]
+
+
+@router.get("/{project_id}", response_model=ProjectResponse)
+def get_one(
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+) -> ProjectResponse:
+    """Return a single project.
+
+    Returns 404 if the project does not exist or belongs to another user.
+    (WHY 404 not 403: see module docstring.)
+    """
+    try:
+        project = project_service.get_project(
+            db, owner_id=current_user.id, project_id=project_id
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+def update(
+    body: UpdateProjectRequest,
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+) -> ProjectResponse:
+    """Rename a project.
+
+    Returns 404 if the project does not exist or belongs to another user.
+    Returns 422 if name is invalid.
+    """
+    try:
+        project = project_service.update_project(
+            db,
+            owner_id=current_user.id,
+            project_id=project_id,
+            name=body.name,
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.delete("/{project_id}", status_code=204)
+def delete(
+    project_id: int = Path(..., ge=1, le=_MAX_SQLITE_INT),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+) -> None:
+    """Delete a project.
+
+    Returns 204 on success.
+    Returns 404 if the project does not exist or belongs to another user.
+    """
+    try:
+        project_service.delete_project(
+            db, owner_id=current_user.id, project_id=project_id
+        )
+    except project_service.ProjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

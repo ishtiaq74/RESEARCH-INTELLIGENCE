@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
@@ -87,6 +88,18 @@ export default function Home() {
           </dl>
         )}
       </div>
+
+      <nav className={styles.nav} aria-label="Quick links">
+        <Link href="/login" className={styles.navLink}>
+          Sign in
+        </Link>
+        <Link href="/register" className={styles.navLinkPrimary}>
+          Sign up
+        </Link>
+        <Link href="/projects" className={styles.navLink}>
+          Projects workspace
+        </Link>
+      </nav>
 
       <p className={styles.hint}>
         Backend URL:{" "}

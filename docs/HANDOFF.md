@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T1.5f done)
+Last updated by: Antigravity (T2 complete, ready for T3)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -9,7 +9,7 @@ Last updated by: Antigravity (T1.5f done)
 - T1.2a Frontend skeleton: **done** — Next.js 16.4.2, App Router, TypeScript strict, ESLint, all pinned.
 - T1.2b Home page: **done** — fetches `{NEXT_PUBLIC_API_BASE_URL}/health`, shows loading/ok/error states. Boilerplate SVGs removed, dark-mode CSS removed, README replaced.
 - T1.2c Backend CORS: **done** — `CORS_ORIGINS` setting (comma-separated, default `http://localhost:3000`, no wildcard), wired via CORSMiddleware. Test confirms allowed origin gets header, disallowed does not.
-- T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL`.
+- T1.2d Frontend env: **done** — `frontend/.env.example` with `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 - T1.2e-1 Testable app factory: **done** — `create_app()` accepts `cfg: Settings | None`; `app = create_app()` at module level preserved. `test_cors.py` rewritten to use `create_app(Settings(cors_origins=...))` directly; hand-built `_make_client` removed.
 - T1.2e-2 No-wildcard enforcement: **done** — `Settings` now has a `field_validator` that raises `ValueError` at startup if `cors_origins` is empty or contains `*`. Tests: wildcard raises, wildcard-in-list raises, empty raises.
 - T1.2e-3 Narrow CORS: **done** — `allow_credentials=False`, `allow_methods=["GET", "OPTIONS"]`, `allow_headers=["Content-Type", "Authorization"]`. Comment in code: "T2 will revisit allow_methods and allow_headers when auth is designed."
@@ -34,47 +34,104 @@ Last updated by: Antigravity (T1.5f done)
 - T1.5d ESLint assessment: **done** — verified npm view eslint dist-tags (maintenance: 9.39.5, latest: 10.13.0) and eslint-config-next@16.4.2 peerDependencies (eslint: >=9.0.0); saved to docs/audit-raw/eslint-versions.txt; peer dependency allows ESLint 10; lowest-risk upgrade path is deferring ESLint 10 to T2 to avoid major version churn during scaffold.
 - T1.5e Write docs/DEPENDENCY_AUDIT.md: **done** — created docs/DEPENDENCY_AUDIT.md summarizing frontend and backend audit findings, severity, scope, usage analysis, recommended actions, and fix risks.
 - T1.5f Correct DEPENDENCY_AUDIT.md: **done** — updated docs/DEPENDENCY_AUDIT.md to state raw severities ("not stated by pip-audit"), recorded owner local venv upgrade of pip (26.2.2) and certifi (2026.10.19) with 22 passing tests, updated braces to "braces *" without "<= 3.0.3" and "fixed version", saved npm-audit-prod.txt (0 vulnerabilities), clarified backend production scan scope (transitive inclusion unverified), and added Watch list section.
+- T1-SCAFFOLD: **done** — T1.1 through T1.5f complete; fresh clone, test suite of 22 tests passing, and dependency audits verified.
+- T2.1 Backend auth: **done** — email + password auth, server-side sessions in SQLite, Alembic migration with foreign keys and batch mode, CORS credentials enabled with explicit origins, Argon2id hashing, in-process rate limiting, and all security fixes completed (SESSION_COOKIE_SECURE setting, dummy hash constant, start_session split, duplicate email race handling, 128 max password length, expired session deletion on lookup, rate limiter expiry reset). 55 backend tests passing, ruff and mypy clean.
+- T2.2 Projects backend: **done** — projects table with owner_id FK (CASCADE), index, timestamps; project_repository scoping every query by owner_id and id; project_service layer enforcing ownership, name rules (strip whitespace, 1-100 chars), and raising identical ProjectNotFoundError (404) for missing and cross-user projects; router calling only service; pagination (limit 50 default, max 100 via Query le=100 returning 422, offset >= 0, id ascending); ProjectResponse using real datetime fields with model_validate (from_orm_model and all type: ignore removed); CORS updated to remove expose_headers=["set-cookie"] per WHATWG Fetch standard; dynamic ScriptDirectory head/parent lookups in migration tests; 99 passing tests, ruff and mypy clean.
+- T2.3 Frontend auth & projects: **done** — Vitest 4.1.12 + React Testing Library 16.3.3 + jsdom test runner configured; single typed API client (`frontend/lib/api.ts`) using `fetch` with `credentials: "include"`, zero storage of tokens in localStorage/sessionStorage, centralized error mapping; sign-up page (`/register`) and sign-in page (`/login`) with client-side hints (8-128 chars), disabled submit buttons, aria-live regions, and client-side GET `/auth/me` guard; projects page (`/projects`) with loading, empty, error, and list states, project creation (name trimmed, 1-100 chars), inline rename, delete confirmation step, sign-out button, and 401 redirect to sign-in; 42 passing frontend tests; bug fix completed for sign-out button and state retention across account switches; lint and type-check clean; production build verified.
+- T2.4 Security review & hardening: **done** — security review completed (docs/reviews/T2.4-security-review.md); hardening batch implemented (integer bounds validation returning 422, Origin check middleware returning 403 on untrusted mutating requests, generic unhandled error handler returning JSON 500 with CORS headers, no-store Cache-Control header middleware, rate limiter cleanup and rolling window, CORS origin format validation). 123 backend and 42 frontend tests passing, ruff and mypy clean, npm test/lint/type-check/build clean.
+- T2.5 Docs & handoff: **done** — TASKS claims corrected, README setup notes verified, end-of-T2 handoff recorded.
 
 ## In progress
-None (T1 complete, stopped before merge per instructions).
+None (T2 complete; ready for owner merge).
 
 ## Next step
-Owner reviews DEPENDENCY_AUDIT.md; then merge t1-5-audit and start T2 (auth and projects); architect writes the T2 task.
+Proceed to T3 Secure PDF upload and storage.
+
+## Known behaviour
+- Next.js 16 Cache Components and preserved page state: With `cacheComponents: true` enabled in `next.config.ts`, Next.js 16 caches up to 3 recently visited routes in memory using React's `<Activity mode="hidden">` instead of unmounting them when navigating away. Component `useState`, form input values, and DOM states are kept alive. While this provides instant back/forward navigation and preserves user input, any state not explicitly reset persists across client-side navigations. On sign-out, all user profile data, project lists, and form inputs must be cleared explicitly, and transient states must be reset in cleanup effects, so switching accounts in the same browser tab starts strictly from the loading state and never renders previous user data.
 
 ## Known problems / open questions
-- When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py at T2: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward. Unverified until a real migration exists.
+- Duplicate-email 409 reveals registered emails: Returning 409 Conflict on registration with an existing email allows account enumeration via signup probing.
+- Rate limiter is in-process, keyed by email only, stored in an unbounded in-memory dictionary, and can be used to lock out a victim: An attacker submitting repeated wrong passwords for a known user email will trigger a lockout for that victim; the in-memory dictionary grows with unique email attempts until server restart.
+- Deployment requires frontend and API on the same site for SameSite=Lax cookies: Browsers do not attach SameSite=Lax cookies on cross-site asynchronous requests (fetch/XHR), requiring frontend and backend to share the same registrable domain (e.g. `app.example.com` and `api.example.com`).
+- Project DELETE removes only the database row: DELETE /projects/{id} removes only the project row in SQLite. Downstream artifacts (stored PDF files on disk in T3, chunks and vector embeddings in T4) will not be cascade-deleted by the database; T3 and T4 must implement explicit file and vector cleanup when a project is deleted.
+- Integer IDs are guessable: Sequential integer primary keys can be traversed/probed. This is acceptable because all queries strictly scope by owner_id in the data layer and return an identical 404 for missing and non-owned projects, preventing data leaks or existence probing.
+- When the first migration alters tables that have foreign keys, SQLite batch mode rebuilds the table. With PRAGMA foreign_keys=ON this can fail or cascade. Revisit in env.py if table alteration occurs: disable foreign key enforcement during migrations and run PRAGMA foreign_key_check afterward.
 - session.py: is_sqlite uses startswith("sqlite") but folder creation uses startswith("sqlite:///"); a URL like sqlite+pysqlite:///path would break. Unused today.
 - The custom creator bypasses SQLAlchemy's SQLite connect handling, so URL options (timeout, uri) are ignored. Add a busy timeout if "database is locked" appears.
-- ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it at T2.
+- ensure_data_dir() in config.py is probably unused by app code (only a test). Remove or reuse it when file upload is implemented in T3.
 - LLM provider not chosen (D-010).
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
-- Email verification / Google sign-in and hosting jurisdiction undecided (not needed until later).
+- Hosting jurisdiction undecided (not needed until deployment; email verification deferred for MVP per D-015; Google sign-in deferred in T2 per D-016).
 - `httpx` deprecation warning from `starlette.testclient` (harmless now; fix when upgrading starlette).
 
-## How to run
+## How to run backend and frontend together locally
 
-### Backend
-```bash
+### Prerequisites & Important Rules
+1. **SESSION_COOKIE_SECURE=false requirement**:
+   In local development, the backend runs on plain HTTP (`http://localhost:8000`). If `SESSION_COOKIE_SECURE` is `true` (the production default), the browser will silently drop and reject the Set-Cookie header because modern browsers refuse to store `Secure` cookies received over plain HTTP. Local `backend/.env` must contain `SESSION_COOKIE_SECURE=false`.
+2. **Use `localhost`, never `127.0.0.1`**:
+   The session cookie uses `SameSite=Lax`. Web browsers define a "site" by its registrable domain (eTLD+1). `http://localhost:3000` (frontend) and `http://localhost:8000` (API) share the exact same site (`localhost`), which allows the browser to send the `SameSite=Lax` session cookie on cross-origin asynchronous `fetch` requests between them. In contrast, `127.0.0.1` is treated as a different site from `localhost`. Accessing the frontend via `http://127.0.0.1:3000` or configuring the API as `http://127.0.0.1:8000` makes requests cross-site, causing browsers to refuse to attach or store the session cookie and immediately breaking authentication. Always use `http://localhost:3000` and `http://localhost:8000`.
+
+### Running Locally (Two Terminals)
+
+#### Terminal 1 — Backend
+```powershell
 cd backend
+# Create virtual environment if not already created
 python -m venv .venv
-.venv\Scripts\pip install -e ".[dev]"
-.venv\Scripts\alembic -c alembic.ini upgrade head
-.venv\Scripts\uvicorn app.main:app --reload   # http://localhost:8000/health
-.venv\Scripts\pytest tests\ -v
-.venv\Scripts\ruff check app/ tests/ alembic/
-.venv\Scripts\mypy app/ tests/ alembic/
-```
+.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
 
-### Frontend
-```bash
+# Ensure backend/.env exists and has SESSION_COOKIE_SECURE=false and CORS_ORIGINS=http://localhost:3000
+# Run database migrations to head
+alembic -c alembic.ini upgrade head
+
+# Start backend server on port 8000
+uvicorn app.main:app --port 8000 --reload
+```
+API is accessible at `http://localhost:8000` (health endpoint: `http://localhost:8000/health`).
+
+#### Terminal 2 — Frontend
+```powershell
 cd frontend
 npm install
-cp .env.example .env.local          # set NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-npm run dev                          # http://localhost:3000
+
+# Ensure frontend/.env.local contains NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+# (Copied from frontend/.env.example)
+cp .env.example .env.local
+
+# Start Next.js development server on port 3000
+npm run dev
+```
+Open your browser at `http://localhost:3000`.
+
+### Running Checks
+
+#### Backend checks (run from backend/):
+```powershell
+cd backend
+.venv\Scripts\pytest -q
+.venv\Scripts\ruff check app tests alembic
+.venv\Scripts\mypy app tests alembic
+```
+
+#### Frontend checks (run from frontend/):
+```powershell
+cd frontend
 npm run lint
 npm run type-check
+npm test
 npm run build
 ```
 
 ## Update rule
 After every sub-step, update this file: Current state, In progress, Next step, Known problems.
+
+## State at end of T2 (auth and projects)
+- Done: email+password auth with server-side sessions, projects CRUD with per-user ownership, sign-up/sign-in/projects pages, hardening batch (Origin check, JSON 500 handler, no-store headers, windowed rate limiter, CORS origin validation). 123 backend and 42 frontend tests.
+- Middleware order, inner to outer: ErrorHandling, OriginCheck, CacheControl, CORS (outermost).
+- Local setup: backend/.env needs SESSION_COOKIE_SECURE=false. Use http://localhost:3000 and http://localhost:8000, never 127.0.0.1 (different site, and the Origin check will return 403). After pulling, run `alembic upgrade head` in backend/ because the dev database does not migrate itself (an old dev database made /projects crash with a missing table).
+- Checks (run from backend/): pytest -q, ruff check app tests alembic, mypy app tests alembic. From frontend/: npm run lint, npm run type-check, npm test, npm run build.
+- Known limitations are in DECISIONS_LOG.md. Before T4: move db.commit() from repositories to the service layer so ingestion can be atomic.
+- Next: T3 secure PDF upload. api.ts already skips the JSON Content-Type for FormData bodies. If streaming uploads or answers misbehave, suspect the BaseHTTPMiddleware layers first.

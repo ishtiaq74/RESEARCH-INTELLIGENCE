@@ -36,6 +36,9 @@ The project is built with zero budget. Sessions can be cut off by usage limits a
 - Always store both the physical PDF page index and the printed page label (if any). Never assume they are equal.
 - If evidence is insufficient, the system must say so.
 
+## Verification
+Run all checks from the backend/ directory so pyproject.toml config applies: `.venv\Scripts\pytest -q` ; `.venv\Scripts\ruff check app tests alembic` ; `.venv\Scripts\mypy app tests alembic`. Paste the real output. Never write 'passed' for a command you did not run, and never retype or summarise command output.
+
 ## Report format (end of every task)
 1. What was done (sub-steps completed).
 2. Commands run and their actual output.
