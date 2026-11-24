@@ -212,3 +212,96 @@ export async function deleteProject(id: number): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Documents functions
+// ---------------------------------------------------------------------------
+
+/**
+ * DocumentRead mirrors the backend DocumentRead schema (D-033).
+ * Internal storage fields (stored_filename, sha256, filesystem paths) are
+ * intentionally excluded from the API response.
+ */
+export interface DocumentRead {
+  id: number;
+  project_id: number;
+  original_filename: string;
+  size_bytes: number;
+  page_count: number | null;
+  status: string; // "uploaded" | "processing" | "ready" | "failed"
+  created_at: string; // ISO-8601 datetime string
+}
+
+/**
+ * Maps HTTP error status codes from POST /projects/{id}/documents to
+ * user-facing messages.  Error codes are specified in D-031.
+ *
+ * For 422 we surface the server's detail text because it carries the specific
+ * reason (corrupt, encrypted, empty, too many pages, project limit).  For
+ * all other codes we return a fixed string to avoid leaking internal detail.
+ *
+ * Client-side pre-checks (extension, size) already filter the common 413/415
+ * cases before the request is sent; this function is the last line of defence
+ * and also covers the server-authoritative check.
+ */
+export function documentUploadErrorMessage(
+  err: ApiClientError
+): string {
+  switch (err.status) {
+    case 409:
+      return "Already uploaded in this project.";
+    case 413:
+      return "Larger than 20 MB.";
+    case 415:
+      return "Not a PDF.";
+    case 422:
+      // Surface the server's reason (D-031 lists: corrupt, encrypted, empty,
+      // too many pages, project document limit reached).
+      return err.message || "File rejected by the server.";
+    case 404:
+      return "Project or document not found.";
+    case 401:
+      // Caller should redirect to /login; this string is a fallback.
+      return "Authentication required. Please sign in.";
+    default:
+      return err.message || "Upload failed. Please try again.";
+  }
+}
+
+export async function listDocuments(
+  projectId: number
+): Promise<DocumentRead[]> {
+  return apiRequest<DocumentRead[]>(`/projects/${projectId}/documents`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Upload a PDF to a project.
+ *
+ * Uses FormData with field name "file" (required by the backend multipart
+ * parser).  We do NOT set Content-Type manually — the browser must set it
+ * so it can include the multipart boundary in the header value.  Setting it
+ * manually would omit the boundary and produce a 422 parse error.
+ */
+export async function uploadDocument(
+  projectId: number,
+  file: File
+): Promise<DocumentRead> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiRequest<DocumentRead>(`/projects/${projectId}/documents`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export async function deleteDocument(
+  projectId: number,
+  documentId: number
+): Promise<void> {
+  return apiRequest<void>(
+    `/projects/${projectId}/documents/${documentId}`,
+    { method: "DELETE" }
+  );
+}
+
