@@ -245,7 +245,12 @@
 .projectName {
   font-size: 1.05rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.projectName:hover {
+  text-decoration: underline;
 }
 
 .projectMeta {

@@ -135,8 +135,14 @@ describe("ProjectsPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("researcher@lab.org")).toBeDefined();
-      expect(screen.getByText("Transformer Architectures")).toBeDefined();
-      expect(screen.getByText("Quantum Computing Algorithms")).toBeDefined();
+      const firstLink = screen.getByRole("link", {
+        name: "Transformer Architectures",
+      });
+      const secondLink = screen.getByRole("link", {
+        name: "Quantum Computing Algorithms",
+      });
+      expect(firstLink.getAttribute("href")).toBe("/projects/101");
+      expect(secondLink.getAttribute("href")).toBe("/projects/102");
     });
   });
 

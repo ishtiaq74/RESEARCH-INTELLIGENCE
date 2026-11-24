@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -455,9 +456,12 @@ export default function ProjectsPage() {
                         ) : (
                           <>
                             <div className={styles.projectDetails}>
-                              <span className={styles.projectName}>
+                              <Link
+                                href={`/projects/${project.id}`}
+                                className={styles.projectName}
+                              >
                                 {project.name}
-                              </span>
+                              </Link>
                               <span className={styles.projectMeta}>
                                 Created:{" "}
                                 {new Date(project.created_at).toLocaleDateString()}
