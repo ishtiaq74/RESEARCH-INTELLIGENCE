@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T2 complete, ready for T3)
+Last updated by: Antigravity (T3.1a done, ready for T3.1b)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -40,12 +40,13 @@ Last updated by: Antigravity (T2 complete, ready for T3)
 - T2.3 Frontend auth & projects: **done** — Vitest 4.1.12 + React Testing Library 16.3.3 + jsdom test runner configured; single typed API client (`frontend/lib/api.ts`) using `fetch` with `credentials: "include"`, zero storage of tokens in localStorage/sessionStorage, centralized error mapping; sign-up page (`/register`) and sign-in page (`/login`) with client-side hints (8-128 chars), disabled submit buttons, aria-live regions, and client-side GET `/auth/me` guard; projects page (`/projects`) with loading, empty, error, and list states, project creation (name trimmed, 1-100 chars), inline rename, delete confirmation step, sign-out button, and 401 redirect to sign-in; 42 passing frontend tests; bug fix completed for sign-out button and state retention across account switches; lint and type-check clean; production build verified.
 - T2.4 Security review & hardening: **done** — security review completed (docs/reviews/T2.4-security-review.md); hardening batch implemented (integer bounds validation returning 422, Origin check middleware returning 403 on untrusted mutating requests, generic unhandled error handler returning JSON 500 with CORS headers, no-store Cache-Control header middleware, rate limiter cleanup and rolling window, CORS origin format validation). 123 backend and 42 frontend tests passing, ruff and mypy clean, npm test/lint/type-check/build clean.
 - T2.5 Docs & handoff: **done** — TASKS claims corrected, README setup notes verified, end-of-T2 handoff recorded.
+- T3.1a Document storage, model, repository, and service: **done** — upload settings, Document model and Alembic migration with sqlite_autoincrement, safe PDF storage service with isolated subprocess probe, owner-scoped document repository, document service with error mapping and automatic file cleanup on DB failure, full isolation test matrix (13 service tests), pip-audit verified 0 vulnerabilities in pypdf 7.1.1.
 
 ## In progress
-None (T2 complete; ready for owner merge).
+None (T3.1a complete).
 
 ## Next step
-Proceed to T3 Secure PDF upload and storage.
+T3.1b: upload endpoint and request-size guard.
 
 ## Known behaviour
 - Next.js 16 Cache Components and preserved page state: With `cacheComponents: true` enabled in `next.config.ts`, Next.js 16 caches up to 3 recently visited routes in memory using React's `<Activity mode="hidden">` instead of unmounting them when navigating away. Component `useState`, form input values, and DOM states are kept alive. While this provides instant back/forward navigation and preserves user input, any state not explicitly reset persists across client-side navigations. On sign-out, all user profile data, project lists, and form inputs must be cleared explicitly, and transient states must be reset in cleanup effects, so switching accounts in the same browser tab starts strictly from the loading state and never renders previous user data.

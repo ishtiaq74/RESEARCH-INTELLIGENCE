@@ -82,7 +82,13 @@ Goal: users can register, sign in and own private projects. No other user can se
 - [x] T2.5 HANDOFF.md state-at-end-of-T2 section added and README setup notes checked
 Acceptance: user A cannot read, list, change or delete user B's projects by any endpoint; passwords never stored or logged in plaintext; all checks and tests pass.
 
-## T3 Secure PDF upload and storage — todo
+## T3 Secure PDF upload and storage — in-progress
+Goal: users can upload research PDFs into their projects securely, with validation, storage isolation, and strict ownership scoping.
+- [x] T3.1a Backend document storage, model, repository, and service
+  - [x] T3.1a-1 Settings, documents table and model, decisions log (D-026 to D-031)
+  - [x] T3.1a-2 Document storage and PDF probe services with unit tests
+  - [x] T3.1a-3 Document repository, service, and isolation tests (no HTTP endpoints)
+- [ ] T3.1b Upload endpoint and request-size guard
 ## T4 Ingestion (page-level extraction, chunking, quality checks) — todo
 ## T5 Retrieval and evaluation set — todo
 ## T6 Grounded answers, citation validation, abstention — todo
