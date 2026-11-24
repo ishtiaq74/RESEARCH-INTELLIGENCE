@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T3.1b done, ready for T3.2)
+Last updated by: Antigravity (T3.2 complete on t3-frontend; manual browser check & merge pending; next = T4)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -42,12 +42,13 @@ Last updated by: Antigravity (T3.1b done, ready for T3.2)
 - T2.5 Docs & handoff: **done** — TASKS claims corrected, README setup notes verified, end-of-T2 handoff recorded.
 - T3.1a Document storage, model, repository, and service: **done** — upload settings, Document model and Alembic migration with sqlite_autoincrement, safe PDF storage service with isolated subprocess probe, owner-scoped document repository, document service with error mapping and automatic file cleanup on DB failure, full isolation test matrix (13 service tests), pip-audit verified 0 vulnerabilities in pypdf 7.1.1.
 - T3.1b Upload endpoint and request-size guard: **done** — `python-multipart==0.0.34` added (`pip-audit` clean), pure ASGI `UploadSizeGuard` middleware (rejects oversized `POST /projects/{id}/documents` via `Content-Length` or streamed chunk count before Starlette spools, preserving CORS and `Cache-Control: no-store` on 413), `app/routers/documents.py` (`POST`/`GET` list/`GET` one/`DELETE`) with `DocumentRead` schema (excluding `stored_filename`, `sha256`, path), bounded integer path IDs (`1..2**63-1`), and 40 new API/size-guard tests in `tests/test_documents_api.py`. Origin handling without an `Origin` header reviewed and reported for owner decision.
+- T3.2 Frontend document upload UI: **done** (on branch `t3-frontend`) — `DocumentRead`, `documentUploadErrorMessage` (409/413/415/422/404/401), `listDocuments`, `uploadDocument` (`FormData` without manual `Content-Type`), and `deleteDocument` in `frontend/lib/api.ts`; `/projects/[projectId]` page wrapped in `<Suspense>` for Next.js 16 `cacheComponents` with list table (plain-text filenames, MB size, pages or `-`, status, date, no download/preview links), PDF upload form with `.pdf` + 20 MiB UX pre-checks and list refresh, two-step delete confirmation, `/projects` links to detail pages, and sign-out/navigation state clearing; 87 frontend tests passing (`vitest`), `eslint`, `tsc --noEmit`, and `next build` all clean.
 
 ## In progress
-None (T3.1b complete).
+None (T3.2 code, tests, and docs complete on `t3-frontend`; manual browser checklist in `docs/progress/T3.2.md` not yet run).
 
 ## Next step
-T3.2: frontend upload UI (and confirm owner decision on `OriginCheckMiddleware` no-`Origin` passthrough).
+Run the manual browser checklist in `docs/progress/T3.2.md` against the running backend and frontend, merge `t3-frontend` to `main`, and start T4 ingestion (page-level extraction, chunking, quality checks). Note: confirm owner decision on `OriginCheckMiddleware` no-`Origin` passthrough (`D-034`), and remember to move `db.commit()` from repositories to the service layer before T4 multi-step ingestion.
 
 ## Known behaviour
 - Next.js 16 Cache Components and preserved page state: With `cacheComponents: true` enabled in `next.config.ts`, Next.js 16 caches up to 3 recently visited routes in memory using React's `<Activity mode="hidden">` instead of unmounting them when navigating away. Component `useState`, form input values, and DOM states are kept alive. While this provides instant back/forward navigation and preserves user input, any state not explicitly reset persists across client-side navigations. On sign-out, all user profile data, project lists, and form inputs must be cleared explicitly, and transient states must be reset in cleanup effects, so switching accounts in the same browser tab starts strictly from the loading state and never renders previous user data.

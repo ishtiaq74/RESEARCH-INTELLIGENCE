@@ -95,6 +95,16 @@ Goal: users can upload research PDFs into their projects securely, with validati
   - [x] T3.1b-4 Comprehensive API and ASGI size-guard tests (`tests/test_documents_api.py`, 40 tests passing)
   - [x] T3.1b-5 Origin handling review (no-Origin passthrough reported; awaiting owner decision before changing auth behavior)
   - [x] T3.1b-6 Docs update (`TASKS.md`, `HANDOFF.md`, `DECISIONS_LOG.md`, `DEPENDENCY_AUDIT.md`)
+- [x] T3.2 Frontend document upload UI (branch `t3-frontend`, automated checks passing; manual browser checklist pending before merge)
+  - [x] T3.2a Progress file (`docs/progress/T3.2.md`) and Step 0 API/CORS/FormData findings
+  - [x] T3.2b API client (`DocumentRead`, `documentUploadErrorMessage`, `listDocuments`, `uploadDocument`, `deleteDocument`, 21 unit tests)
+  - [x] T3.2c Project detail page (`/projects/[projectId]`) list view (loading, not-found 404, error+retry, empty, document table with MB size / pages or `-` / status / date, plain-text filenames, no download links)
+  - [x] T3.2d PDF upload flow (`accept="application/pdf,.pdf"`, single file, disabled while uploading, `aria-live` error area, client-side `.pdf` + 20 MiB UX pre-checks, list refresh)
+  - [x] T3.2e Two-step delete confirmation (`Delete` -> `Confirm Delete` / `Cancel`, 204 removal from list)
+  - [x] T3.2f Project list links (`/projects` project names link to `/projects/[projectId]`)
+  - [x] T3.2g State hygiene on sign-out and project navigation (clears documents, selected file, errors, and confirmation state under `cacheComponents: true`)
+  - [x] T3.2h Edge-case tests and full frontend checks (`eslint`, `tsc --noEmit`, 87 Vitest tests, `next build` all passing)
+  - [x] T3.2i Docs update (`TASKS.md`, `HANDOFF.md`, `DECISIONS_LOG.md`, manual browser checklist in `docs/progress/T3.2.md`)
 ## T4 Ingestion (page-level extraction, chunking, quality checks) — todo
 ## T5 Retrieval and evaluation set — todo
 ## T6 Grounded answers, citation validation, abstention — todo
