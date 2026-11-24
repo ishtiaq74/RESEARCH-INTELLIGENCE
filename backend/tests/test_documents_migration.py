@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from alembic.config import Config
@@ -14,6 +15,41 @@ from sqlalchemy.exc import IntegrityError
 from alembic import command
 from app.config import BACKEND_DIR
 from app.db.session import create_db_engine
+
+DOC_COLUMNS = (
+    "project_id, original_filename, stored_filename, "
+    "sha256, size_bytes, page_count, status, created_at"
+)
+
+
+def _insert_doc(
+    conn: Any,
+    project_id: int,
+    original_filename: str,
+    stored_filename: str,
+    sha256: str,
+    size_bytes: int = 1000,
+    page_count: int | None = 5,
+    status: str = "uploaded",
+    created_at: str = "2026-01-01 00:00:00",
+) -> None:
+    conn.execute(
+        text(
+            f"INSERT INTO documents ({DOC_COLUMNS}) "
+            "VALUES (:project_id, :original_filename, :stored_filename, "
+            ":sha256, :size_bytes, :page_count, :status, :created_at)"
+        ),
+        {
+            "project_id": project_id,
+            "original_filename": original_filename,
+            "stored_filename": stored_filename,
+            "sha256": sha256,
+            "size_bytes": size_bytes,
+            "page_count": page_count,
+            "status": status,
+            "created_at": created_at,
+        },
+    )
 
 
 @pytest.fixture()
@@ -49,7 +85,9 @@ def test_documents_table_and_columns_exist_after_upgrade(migrated_engine: Engine
         "status",
         "created_at",
     }
-    assert columns >= expected_columns, f"Missing columns in documents: {expected_columns - columns}"
+    assert columns >= expected_columns, (
+        f"Missing columns in documents: {expected_columns - columns}"
+    )
 
 
 def test_documents_migration_downgrade_removes_table(tmp_path: Path) -> None:
@@ -112,14 +150,12 @@ def test_documents_migration_full_lifecycle(tmp_path: Path) -> None:
 def test_documents_project_id_fk_enforced(migrated_engine: Engine) -> None:
     """Inserting a document with a non-existent project_id raises IntegrityError."""
     with migrated_engine.connect() as conn, pytest.raises(IntegrityError):
-        conn.execute(
-            text(
-                "INSERT INTO documents ("
-                "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                ") VALUES ("
-                "99999, 'test.pdf', 'uuid1.pdf', 'hash1', 1024, 1, 'uploaded', '2026-01-01 00:00:00'"
-                ")"
-            )
+        _insert_doc(
+            conn,
+            project_id=99999,
+            original_filename="test.pdf",
+            stored_filename="uuid1.pdf",
+            sha256="hash1",
         )
         conn.commit()
 
@@ -142,54 +178,46 @@ def test_documents_unique_constraints(migrated_engine: Engine) -> None:
             )
         )
         # First document in project 1
-        conn.execute(
-            text(
-                "INSERT INTO documents ("
-                "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                ") VALUES ("
-                "1, 'paper.pdf', 'stored1.pdf', 'sha256_aaa', 1000, 5, 'uploaded', '2026-01-01 00:00:00'"
-                ")"
-            )
+        _insert_doc(
+            conn,
+            project_id=1,
+            original_filename="paper.pdf",
+            stored_filename="stored1.pdf",
+            sha256="sha256_aaa",
         )
         conn.commit()
 
         # Duplicate (project_id, sha256) in same project should fail
         with pytest.raises(IntegrityError):
-            conn.execute(
-                text(
-                    "INSERT INTO documents ("
-                    "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                    ") VALUES ("
-                    "1, 'paper_copy.pdf', 'stored2.pdf', 'sha256_aaa', 1000, 5, 'uploaded', '2026-01-01 00:00:00'"
-                    ")"
-                )
+            _insert_doc(
+                conn,
+                project_id=1,
+                original_filename="paper_copy.pdf",
+                stored_filename="stored2.pdf",
+                sha256="sha256_aaa",
             )
             conn.commit()
         conn.rollback()
 
         # Duplicate stored_filename should fail even across different projects
         with pytest.raises(IntegrityError):
-            conn.execute(
-                text(
-                    "INSERT INTO documents ("
-                    "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                    ") VALUES ("
-                    "2, 'other.pdf', 'stored1.pdf', 'sha256_bbb', 2000, 10, 'uploaded', '2026-01-01 00:00:00'"
-                    ")"
-                )
+            _insert_doc(
+                conn,
+                project_id=2,
+                original_filename="other.pdf",
+                stored_filename="stored1.pdf",
+                sha256="sha256_bbb",
             )
             conn.commit()
         conn.rollback()
 
         # Same sha256 in a DIFFERENT project is allowed
-        conn.execute(
-            text(
-                "INSERT INTO documents ("
-                "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                ") VALUES ("
-                "2, 'paper_p2.pdf', 'stored3.pdf', 'sha256_aaa', 1000, 5, 'uploaded', '2026-01-01 00:00:00'"
-                ")"
-            )
+        _insert_doc(
+            conn,
+            project_id=2,
+            original_filename="paper_p2.pdf",
+            stored_filename="stored3.pdf",
+            sha256="sha256_aaa",
         )
         conn.commit()
 
@@ -209,19 +237,18 @@ def test_deleting_project_cascades_to_documents(migrated_engine: Engine) -> None
                 "VALUES (1, 'Cascade Test Project', '2026-01-01', '2026-01-01')"
             )
         )
-        conn.execute(
-            text(
-                "INSERT INTO documents ("
-                "project_id, original_filename, stored_filename, sha256, size_bytes, page_count, status, created_at"
-                ") VALUES ("
-                "1, 'doc.pdf', 'cascade_stored.pdf', 'sha256_cascade', 500, 2, 'uploaded', '2026-01-01 00:00:00'"
-                ")"
-            )
+        _insert_doc(
+            conn,
+            project_id=1,
+            original_filename="doc.pdf",
+            stored_filename="cascade_stored.pdf",
+            sha256="sha256_cascade",
         )
         conn.commit()
 
         # Verify document exists
-        count_before = conn.execute(text("SELECT count(*) FROM documents WHERE project_id = 1")).scalar()
+        count_query = text("SELECT count(*) FROM documents WHERE project_id = 1")
+        count_before = conn.execute(count_query).scalar()
         assert count_before == 1
 
         # Delete project
@@ -229,5 +256,5 @@ def test_deleting_project_cascades_to_documents(migrated_engine: Engine) -> None
         conn.commit()
 
         # Verify document was cascaded
-        count_after = conn.execute(text("SELECT count(*) FROM documents WHERE project_id = 1")).scalar()
+        count_after = conn.execute(count_query).scalar()
         assert count_after == 0

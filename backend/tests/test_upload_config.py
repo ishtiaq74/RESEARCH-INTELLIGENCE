@@ -11,7 +11,6 @@ from app.config import BACKEND_DIR, Settings
 
 def test_upload_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify default values for upload settings."""
-    # Ensure no environment variables interfere
     monkeypatch.delenv("MAX_UPLOAD_BYTES", raising=False)
     monkeypatch.delenv("MAX_PDF_PAGES", raising=False)
     monkeypatch.delenv("MAX_DOCUMENTS_PER_PROJECT", raising=False)
@@ -42,21 +41,33 @@ def test_upload_settings_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.upload_dir == Path("custom/upload/path")
 
 
-@pytest.mark.parametrize(
-    ("field", "invalid_value"),
-    [
-        ("max_upload_bytes", 0),
-        ("max_upload_bytes", -1),
-        ("max_pdf_pages", 0),
-        ("max_pdf_pages", -10),
-        ("max_documents_per_project", 0),
-        ("max_documents_per_project", -5),
-        ("pdf_probe_timeout_seconds", 0.0),
-        ("pdf_probe_timeout_seconds", -0.5),
-    ],
-)
-def test_upload_settings_zero_and_negative_rejected(field: str, invalid_value: int | float) -> None:
-    """Verify zero and negative values are rejected with ValidationError."""
+@pytest.mark.parametrize("invalid_value", [0, -1])
+def test_upload_settings_max_upload_bytes_rejected(invalid_value: int) -> None:
+    """Verify zero and negative max_upload_bytes are rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        Settings(_env_file=None, **{field: invalid_value})
+        Settings(_env_file=None, max_upload_bytes=invalid_value)
+    assert "must be greater than zero" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_value", [0, -10])
+def test_upload_settings_max_pdf_pages_rejected(invalid_value: int) -> None:
+    """Verify zero and negative max_pdf_pages are rejected."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(_env_file=None, max_pdf_pages=invalid_value)
+    assert "must be greater than zero" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_value", [0, -5])
+def test_upload_settings_max_documents_rejected(invalid_value: int) -> None:
+    """Verify zero and negative max_documents_per_project are rejected."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(_env_file=None, max_documents_per_project=invalid_value)
+    assert "must be greater than zero" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_value", [0.0, -0.5])
+def test_upload_settings_timeout_rejected(invalid_value: float) -> None:
+    """Verify zero and negative pdf_probe_timeout_seconds are rejected."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(_env_file=None, pdf_probe_timeout_seconds=invalid_value)
     assert "must be greater than zero" in str(exc_info.value)
