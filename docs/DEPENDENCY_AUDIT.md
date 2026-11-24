@@ -15,6 +15,7 @@
   - Scanning the local virtualenv packages detected `certifi 2026.10.18` (pulled in only via `httpx` for `pytest`) and 6 unique tooling advisories in the virtual environment's internal `pip 25.0.1`.
   - On 2026-10-23, the owner upgraded `pip` to `26.2.2` and `certifi` to `2026.10.19` in the local backend `.venv`, and all 22 backend tests passed afterwards.
 - **ESLint Status:** `eslint@9.39.5` is on the `maintenance` dist-tag and prints a deprecation notice. `eslint-config-next@16.4.2` peerDependencies permits `eslint >= 9.0.0` (including ESLint 10), but upgrading to ESLint 10 is a major version change.
+- **Backend PDF Probing Dependency (`pypdf 7.1.1`):** `pip-audit` against `pypdf 7.1.1` in an isolated temporary virtualenv reported `No known vulnerabilities found` on 2026-11-25.
 
 ---
 
@@ -27,6 +28,7 @@
 | `certifi` (`2026.10.18`) | not stated by pip-audit (`PYSEC-2026-4320`) | Dev-only transitive (`httpx` &rarr; `httpcore` &rarr; `certifi` for `TestClient`) | No. `TestClient` in `tests/` performs in-process ASGI dispatch; no external TLS traffic to untrusted emSign roots occurs. | **Fixed in the owner's local venv. certifi and pip are not declared in pyproject.toml, so the repo itself is unchanged.** | **Very Low** (patch bump). |
 | `pip` (`25.0.1`) | not stated by pip-audit (6 unique advisories: `PYSEC-2026-1795`, `1796`, `2875`, `2876`, `196`, `3721`) | Tooling (virtualenv installer package in `.venv`) | No. We do not download packages from untrusted indexes or run malicious wheel archives; Python 3.12 implements PEP 706. | **Fixed in the owner's local venv. certifi and pip are not declared in pyproject.toml, so the repo itself is unchanged.** | **Very Low** (standard tooling update). |
 | `eslint` (`9.39.5`) | Low / Deprecation notice (no CVE) | Dev-only | Yes, for `npm run lint`. | **Fix at T2**. Retain `9.39.5` for scaffold completion; test upgrade to ESLint 10 in a separate branch during T2. | **Medium** (major version jump to ESLint 10; requires verifying plugin and flat-config compatibility). |
+| `pypdf` (`7.1.1`) | None (0 vulnerabilities) | Backend runtime (PDF upload probing and test fixtures) | Yes | **Keep as-is.** Audited via `pip-audit` in isolated venv; 0 known vulnerabilities. | **Zero risk**. |
 
 ---
 
@@ -64,6 +66,10 @@ Will install eslint-config-next@14.2.35, which is a breaking change
   { "eslint": ">=9.0.0", "typescript": ">=3.3.1" }
   ```
 - While ESLint 10 is technically allowed by peer dependencies, moving to `10.x` is a major version migration that should be vetted separately from scaffolding.
+
+### 4. Backend: `pypdf` (T3.1a)
+- On 2026-11-25 during T3.1a-3, `pypdf 7.1.1` was audited using `pip-audit` executed in an isolated temporary virtualenv outside the repository.
+- `pip-audit` output: `No known vulnerabilities found`.
 
 ---
 
