@@ -88,7 +88,13 @@ Goal: users can upload research PDFs into their projects securely, with validati
   - [x] T3.1a-1 Settings, documents table and model, decisions log (D-026 to D-031)
   - [x] T3.1a-2 Document storage and PDF probe services with unit tests
   - [x] T3.1a-3 Document repository, service, and isolation tests (no HTTP endpoints)
-- [ ] T3.1b Upload endpoint and request-size guard
+- [x] T3.1b Upload endpoint and request-size guard
+  - [x] T3.1b-1 Dependency (`python-multipart==0.0.34` pinned in `pyproject.toml`, `pip-audit` verified 0 vulnerabilities)
+  - [x] T3.1b-2 Pure ASGI `UploadSizeGuard` middleware (Content-Length + streamed byte count limit `max_upload_bytes + 4 KiB` on `POST /projects/{id}/documents`, CORS + `Cache-Control: no-store` preserved on 413)
+  - [x] T3.1b-3 Document upload router (`POST /projects/{id}/documents`, `GET /projects/{id}/documents`, `GET /projects/{id}/documents/{doc_id}`, `DELETE /projects/{id}/documents/{doc_id}`), `DocumentRead` schema excluding internal storage fields, bounded `int` path IDs
+  - [x] T3.1b-4 Comprehensive API and ASGI size-guard tests (`tests/test_documents_api.py`, 40 tests passing)
+  - [x] T3.1b-5 Origin handling review (no-Origin passthrough reported; awaiting owner decision before changing auth behavior)
+  - [x] T3.1b-6 Docs update (`TASKS.md`, `HANDOFF.md`, `DECISIONS_LOG.md`, `DEPENDENCY_AUDIT.md`)
 ## T4 Ingestion (page-level extraction, chunking, quality checks) — todo
 ## T5 Retrieval and evaluation set — todo
 ## T6 Grounded answers, citation validation, abstention — todo

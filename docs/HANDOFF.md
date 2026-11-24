@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated by: Antigravity (T3.1a done, ready for T3.1b)
+Last updated by: Antigravity (T3.1b done, ready for T3.2)
 
 ## Current state
 - T0-CONTINUITY: **done**.
@@ -41,12 +41,13 @@ Last updated by: Antigravity (T3.1a done, ready for T3.1b)
 - T2.4 Security review & hardening: **done** — security review completed (docs/reviews/T2.4-security-review.md); hardening batch implemented (integer bounds validation returning 422, Origin check middleware returning 403 on untrusted mutating requests, generic unhandled error handler returning JSON 500 with CORS headers, no-store Cache-Control header middleware, rate limiter cleanup and rolling window, CORS origin format validation). 123 backend and 42 frontend tests passing, ruff and mypy clean, npm test/lint/type-check/build clean.
 - T2.5 Docs & handoff: **done** — TASKS claims corrected, README setup notes verified, end-of-T2 handoff recorded.
 - T3.1a Document storage, model, repository, and service: **done** — upload settings, Document model and Alembic migration with sqlite_autoincrement, safe PDF storage service with isolated subprocess probe, owner-scoped document repository, document service with error mapping and automatic file cleanup on DB failure, full isolation test matrix (13 service tests), pip-audit verified 0 vulnerabilities in pypdf 7.1.1.
+- T3.1b Upload endpoint and request-size guard: **done** — `python-multipart==0.0.34` added (`pip-audit` clean), pure ASGI `UploadSizeGuard` middleware (rejects oversized `POST /projects/{id}/documents` via `Content-Length` or streamed chunk count before Starlette spools, preserving CORS and `Cache-Control: no-store` on 413), `app/routers/documents.py` (`POST`/`GET` list/`GET` one/`DELETE`) with `DocumentRead` schema (excluding `stored_filename`, `sha256`, path), bounded integer path IDs (`1..2**63-1`), and 40 new API/size-guard tests in `tests/test_documents_api.py`. Origin handling without an `Origin` header reviewed and reported for owner decision.
 
 ## In progress
-None (T3.1a complete).
+None (T3.1b complete).
 
 ## Next step
-T3.1b: upload endpoint and request-size guard.
+T3.2: frontend upload UI (and confirm owner decision on `OriginCheckMiddleware` no-`Origin` passthrough).
 
 ## Known behaviour
 - Next.js 16 Cache Components and preserved page state: With `cacheComponents: true` enabled in `next.config.ts`, Next.js 16 caches up to 3 recently visited routes in memory using React's `<Activity mode="hidden">` instead of unmounting them when navigating away. Component `useState`, form input values, and DOM states are kept alive. While this provides instant back/forward navigation and preserves user input, any state not explicitly reset persists across client-side navigations. On sign-out, all user profile data, project lists, and form inputs must be cleared explicitly, and transient states must be reset in cleanup effects, so switching accounts in the same browser tab starts strictly from the loading state and never renders previous user data.
@@ -65,6 +66,8 @@ T3.1b: upload endpoint and request-size guard.
 - Owner's laptop: 8 GB RAM, no Docker (SQLite chosen; local LLM likely impractical or must be very small quantized CPU model; provider interface deferred to D-010).
 - Hosting jurisdiction undecided (not needed until deployment; email verification deferred for MVP per D-015; Google sign-in deferred in T2 per D-016).
 - `httpx` deprecation warning from `starlette.testclient` (harmless now; fix when upgrading starlette).
+- `OriginCheckMiddleware` allows requests with NO `Origin` header (`if origin is not None`): designed for non-browser CLI/tests, but any browser request somehow omitting `Origin` on a state-changing method would rely solely on `SameSite=Lax` cookies; awaiting owner decision on whether to add a `require_origin` setting or stricter header check (`Sec-Fetch-Site` / `Referer` fallback).
+- Current middleware order (inner to outer): `UploadSizeGuard` (pure ASGI), `ErrorHandlingMiddleware`, `OriginCheckMiddleware`, `CacheControlMiddleware`, `CORSMiddleware` (outermost).
 
 ## How to run backend and frontend together locally
 
