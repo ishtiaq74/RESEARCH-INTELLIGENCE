@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiClientError,
   deleteDocument,
@@ -37,7 +37,7 @@ function parseProjectId(raw: string | string[] | undefined): number | null {
   return parsed;
 }
 
-export default function ProjectDetailPage() {
+function ProjectDetailContent() {
   const params = useParams<{ projectId: string }>();
   const router = useRouter();
   // Keep router in a ref so auth-error handling stays referentially stable and
@@ -501,5 +501,25 @@ export default function ProjectDetailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProjectDetailPage() {
+  // Next.js 16 cacheComponents requires dynamic URL hooks like useParams() to be
+  // inside a <Suspense> boundary so the static shell can prerender cleanly.
+  return (
+    <Suspense
+      fallback={
+        <div className={styles.page}>
+          <div className={styles.container}>
+            <div className={styles.loadingState} role="status" aria-live="polite">
+              <p>Loading project documents…</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <ProjectDetailContent />
+    </Suspense>
   );
 }

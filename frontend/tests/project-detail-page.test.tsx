@@ -642,3 +642,100 @@ describe("ProjectDetailPage (T3.2g state hygiene)", () => {
     });
   });
 });
+
+describe("ProjectDetailPage (T3.2h remaining edge cases)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams = { projectId: "10" };
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("accepts uppercase .PDF extension client-side", async () => {
+    const uploadedDoc = {
+      id: 105,
+      project_id: 10,
+      original_filename: "UPPERCASE.PDF",
+      size_bytes: 1024,
+      page_count: 1,
+      status: "uploaded",
+      created_at: "2026-11-25T00:00:00Z",
+    };
+
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([uploadedDoc]);
+    vi.mocked(uploadDocument).mockResolvedValueOnce(uploadedDoc);
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+    });
+
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const pdfFile = new File(["%PDF-1.4"], "UPPERCASE.PDF", {
+      type: "application/pdf",
+    });
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+    await waitFor(() => {
+      expect(uploadDocument).toHaveBeenCalledWith(10, pdfFile);
+      expect(screen.getByText("UPPERCASE.PDF")).toBeDefined();
+    });
+  });
+
+  it("disables Confirm Delete and Cancel buttons while deletion is in flight", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([
+      {
+        id: 77,
+        project_id: 10,
+        original_filename: "in-flight.pdf",
+        size_bytes: 1024,
+        page_count: 2,
+        status: "uploaded",
+        created_at: "2026-11-25T00:00:00Z",
+      },
+    ]);
+
+    let resolveDelete!: () => void;
+    vi.mocked(deleteDocument).mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDelete = resolve;
+      })
+    );
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("in-flight.pdf")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /confirm delete/i })
+    );
+
+    await waitFor(() => {
+      const deletingBtn = screen.getByRole("button", {
+        name: /deleting/i,
+      }) as HTMLButtonElement;
+      const cancelBtn = screen.getByRole("button", {
+        name: /cancel/i,
+      }) as HTMLButtonElement;
+      expect(deletingBtn.disabled).toBe(true);
+      expect(cancelBtn.disabled).toBe(true);
+    });
+
+    resolveDelete();
+
+    await waitFor(() => {
+      expect(screen.queryByText("in-flight.pdf")).toBeNull();
+    });
+  });
+});
