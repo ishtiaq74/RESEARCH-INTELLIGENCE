@@ -6,12 +6,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiClientError,
   DocumentRead,
+  documentUploadErrorMessage,
   getMe,
   listDocuments,
   logout,
+  uploadDocument,
   UserResponse,
 } from "@/lib/api";
 import styles from "./project-detail.module.css";
+
+// These mirror server limits and must change together (D-031).
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024; // 20 MiB
+const ACCEPTED_EXTENSION = ".pdf";
 
 type PagePhase = "loading" | "not-found" | "error" | "ready";
 
@@ -47,6 +53,10 @@ export default function ProjectDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [user, setUser] = useState<UserResponse | null>(null);
   const [documents, setDocuments] = useState<DocumentRead[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Derive effective phase so invalid route params or a projectId change never
@@ -62,6 +72,12 @@ export default function ProjectDetailPage() {
     setIsSigningOut(false);
     setUser(null);
     setDocuments([]);
+    setSelectedFile(null);
+    setIsUploading(false);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setLoadError(null);
     setLoadedForId(null);
     setPhase("loading");
@@ -70,6 +86,7 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     return () => {
       setIsSigningOut(false);
+      setIsUploading(false);
     };
   }, []);
 
@@ -178,6 +195,49 @@ export default function ProjectDetailPage() {
     }
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setUploadError(null);
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+  }
+
+  async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (projectId === null || !selectedFile) return;
+
+    setUploadError(null);
+
+    // Client-side pre-checks for fast UX feedback; the server enforces limits authoritatively.
+    if (!selectedFile.name.toLowerCase().endsWith(ACCEPTED_EXTENSION)) {
+      setUploadError("Not a PDF.");
+      return;
+    }
+    if (selectedFile.size > MAX_UPLOAD_BYTES) {
+      setUploadError("Larger than 20 MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await uploadDocument(projectId, selectedFile);
+      const refreshed = await listDocuments(projectId);
+      setDocuments(refreshed);
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      if (err instanceof ApiClientError) {
+        setUploadError(documentUploadErrorMessage(err));
+      } else {
+        setUploadError("Upload failed. Please try again.");
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
@@ -246,7 +306,48 @@ export default function ProjectDetailPage() {
         )}
 
         {effectivePhase === "ready" && (
-          <section aria-labelledby="documents-heading">
+          <>
+            <section className={styles.card} aria-labelledby="upload-heading">
+              <h2 id="upload-heading" className={styles.sectionHeading}>
+                Upload PDF
+              </h2>
+              <form onSubmit={handleUpload} className={styles.uploadForm}>
+                <label htmlFor="pdf-upload" className={styles.label}>
+                  Select PDF file
+                </label>
+                <div className={styles.uploadRow}>
+                  <input
+                    ref={fileInputRef}
+                    id="pdf-upload"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    className={styles.fileInput}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!selectedFile || isUploading}
+                    className={styles.primaryButton}
+                  >
+                    {isUploading ? "Uploading…" : "Upload"}
+                  </button>
+                </div>
+                <div
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className={uploadError ? styles.formError : styles.hint}
+                >
+                  {uploadError ? (
+                    <span role="alert">{uploadError}</span>
+                  ) : (
+                    <span>PDF only, maximum 20 MB.</span>
+                  )}
+                </div>
+              </form>
+            </section>
+
+            <section aria-labelledby="documents-heading">
             <h2 id="documents-heading" className={styles.sectionHeading}>
               Documents ({documents.length})
             </h2>
@@ -288,6 +389,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
           </section>
+          </>
         )}
       </div>
     </div>

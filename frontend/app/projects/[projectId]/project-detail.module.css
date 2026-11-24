@@ -86,6 +86,76 @@
   margin-bottom: 1rem;
 }
 
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.uploadRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fileInput {
+  flex: 1;
+  min-width: 220px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.fileInput:disabled {
+  opacity: 0.6;
+}
+
+.primaryButton {
+  background-color: var(--color-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.formError {
+  color: var(--color-error-text);
+  font-size: 0.85rem;
+}
+
 .secondaryButton {
   background: transparent;
   border: 1px solid var(--color-border);

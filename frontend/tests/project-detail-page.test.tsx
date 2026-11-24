@@ -6,6 +6,7 @@ import {
   getMe,
   listDocuments,
   logout,
+  uploadDocument,
 } from "@/lib/api";
 
 const mockPush = vi.fn();
@@ -30,6 +31,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
     ...actual,
     getMe: vi.fn(),
     listDocuments: vi.fn(),
+    uploadDocument: vi.fn(),
     logout: vi.fn(),
   };
 });
@@ -231,6 +233,182 @@ describe("ProjectDetailPage (T3.2c list view)", () => {
       expect(logout).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith("/login");
       expect(screen.queryByText("secret.pdf")).toBeNull();
+    });
+  });
+});
+
+describe("ProjectDetailPage (T3.2d upload flow)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams = { projectId: "10" };
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("uploads a valid PDF, disables the upload button while in flight, and refreshes the list", async () => {
+    const uploadedDoc = {
+      id: 99,
+      project_id: 10,
+      original_filename: "paper.pdf",
+      size_bytes: 2 * 1024 * 1024,
+      page_count: 8,
+      status: "uploaded",
+      created_at: "2026-11-25T00:00:00Z",
+    };
+
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([uploadedDoc]);
+
+    let resolveUpload!: (doc: typeof uploadedDoc) => void;
+    vi.mocked(uploadDocument).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpload = resolve;
+      })
+    );
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+    });
+
+    const uploadButton = screen.getByRole("button", { name: /^upload$/i }) as HTMLButtonElement;
+    expect(uploadButton.disabled).toBe(true);
+
+    const fileInput = screen.getByLabelText(/select pdf file/i) as HTMLInputElement;
+    expect(fileInput.getAttribute("accept")).toBe("application/pdf,.pdf");
+    expect(fileInput.multiple).toBe(false);
+
+    const pdfFile = new File(["%PDF-1.4"], "paper.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+    expect(uploadButton.disabled).toBe(false);
+
+    fireEvent.click(uploadButton);
+
+    await waitFor(() => {
+      const busyButton = screen.getByRole("button", {
+        name: /uploading/i,
+      }) as HTMLButtonElement;
+      expect(busyButton.disabled).toBe(true);
+    });
+
+    resolveUpload(uploadedDoc);
+
+    await waitFor(() => {
+      expect(uploadDocument).toHaveBeenCalledWith(10, pdfFile);
+      expect(listDocuments).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("paper.pdf")).toBeDefined();
+    });
+  });
+
+  it("rejects non-PDF files client-side without calling the API", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([]);
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+    });
+
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const badFile = new File(["hello"], "notes.txt", { type: "text/plain" });
+    fireEvent.change(fileInput, { target: { files: [badFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Not a PDF.");
+    });
+    expect(uploadDocument).not.toHaveBeenCalled();
+  });
+
+  it("rejects files larger than 20 MB client-side without calling the API", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([]);
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+    });
+
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const hugeFile = new File(["%PDF-1.4"], "huge.pdf", {
+      type: "application/pdf",
+    });
+    Object.defineProperty(hugeFile, "size", { value: 20 * 1024 * 1024 + 1 });
+
+    fireEvent.change(fileInput, { target: { files: [hugeFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Larger than 20 MB.");
+    });
+    expect(uploadDocument).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [409, "duplicate", "Already uploaded in this project."],
+    [413, "too large", "Larger than 20 MB."],
+    [415, "wrong type", "Not a PDF."],
+    [422, "PDF is encrypted.", "PDF is encrypted."],
+    [404, "not found", "Project or document not found."],
+  ])(
+    "displays mapped error message for HTTP %i",
+    async (status, serverDetail, expectedMessage) => {
+      vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+      vi.mocked(listDocuments).mockResolvedValueOnce([]);
+      vi.mocked(uploadDocument).mockRejectedValueOnce(
+        new ApiClientError(serverDetail, status)
+      );
+
+      render(<ProjectDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+      });
+
+      const fileInput = screen.getByLabelText(/select pdf file/i);
+      const pdfFile = new File(["%PDF-1.4"], "paper.pdf", {
+        type: "application/pdf",
+      });
+      fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+      fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert").textContent).toBe(expectedMessage);
+      });
+    }
+  );
+
+  it("redirects to /login on 401 during upload", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([]);
+    vi.mocked(uploadDocument).mockRejectedValueOnce(
+      new ApiClientError("Not authenticated", 401)
+    );
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/select pdf file/i)).toBeDefined();
+    });
+
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const pdfFile = new File(["%PDF-1.4"], "paper.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/login");
     });
   });
 });
