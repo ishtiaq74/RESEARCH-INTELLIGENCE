@@ -10,8 +10,9 @@ from app.middleware import (
     CacheControlMiddleware,
     ErrorHandlingMiddleware,
     OriginCheckMiddleware,
+    UploadSizeGuard,
 )
-from app.routers import auth, health, projects
+from app.routers import auth, documents, health, projects
 
 
 def create_app(cfg: Settings | None = None) -> FastAPI:
@@ -50,10 +51,22 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     # Starlette add_middleware wraps in reverse order (user_middleware.insert(0, ...)):
     # Middlewares added later become OUTER.
     # Order from inner to outer:
-    #   1. ErrorHandlingMiddleware (catches unhandled exceptions, returns JSON 500)
-    #   2. OriginCheckMiddleware (enforces allowed origins for state-changing methods)
-    #   3. CacheControlMiddleware (sets Cache-Control: no-store on /auth and /projects)
-    #   4. CORSMiddleware (outermost: attaches CORS headers, handles preflight)
+    #   1. UploadSizeGuard (pure ASGI; rejects oversized POSTs before Starlette spools)
+    #   2. ErrorHandlingMiddleware (catches unhandled exceptions, returns JSON 500)
+    #   3. OriginCheckMiddleware (enforces allowed origins for state-changing methods)
+    #   4. CacheControlMiddleware (sets Cache-Control: no-store on /auth and /projects)
+    #   5. CORSMiddleware (outermost: attaches CORS headers, handles preflight)
+    #
+    # WHY UploadSizeGuard IS INNERMOST (INSIDE ErrorHandling AND OriginCheck):
+    #   Starlette spools multipart bodies to temp files BEFORE the route handler runs,
+    #   so a size check inside the route is too late. UploadSizeGuard intercepts the
+    #   raw ASGI receive channel directly around FastAPI and counts bytes as they
+    #   stream in, without a BaseHTTPMiddleware task-group boundary between receive
+    #   and the guard. It is placed inside OriginCheckMiddleware so that an upload
+    #   from a disallowed Origin is rejected with 403 before reading any bytes.
+    #   Its 413 responses still pass through CacheControlMiddleware and CORSMiddleware
+    #   and therefore carry the correct Cache-Control: no-store and CORS headers.
+    app.add_middleware(UploadSizeGuard, max_bytes=cfg.max_upload_bytes)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(OriginCheckMiddleware, settings=cfg)
     app.add_middleware(CacheControlMiddleware)
@@ -69,6 +82,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
+    app.include_router(documents.router)
 
     return app
 

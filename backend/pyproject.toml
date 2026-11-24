@@ -19,6 +19,12 @@ dependencies = [
     # Pydantic layer before they reach service/repository code.
     # BSD-2 licensed, no paid component.
     "email-validator==2.2.0",
+    # T3.1b Upload: FastAPI/Starlette require python-multipart to parse
+    # multipart/form-data bodies (UploadFile). Without it, FastAPI raises
+    # RuntimeError at startup when any route uses File() or UploadFile.
+    # Compatible with fastapi==0.143.5 (which requires python-multipart>=0.0.18).
+    # Apache-2.0 licensed, zero transitive dependencies.
+    "python-multipart==0.0.34",
 ]
 
 [project.optional-dependencies]

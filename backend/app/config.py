@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from pydantic import field_validator, model_validator
+from pydantic import ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger("app.config")
@@ -43,6 +43,27 @@ class Settings(BaseSettings):
     #   Specifying explicit origins is both a browser requirement and a security
     #   control — only listed origins may send credentialed cross-origin requests.
     cors_origins: str = "http://localhost:3000"
+
+    # Document upload settings
+    max_upload_bytes: int = 20 * 1024 * 1024
+    max_pdf_pages: int = 300
+    max_documents_per_project: int = 20
+    pdf_probe_timeout_seconds: float = 10.0
+    upload_dir: Path = BACKEND_DIR / "data" / "uploads"
+
+    @field_validator(
+        "max_upload_bytes",
+        "max_pdf_pages",
+        "max_documents_per_project",
+        "pdf_probe_timeout_seconds",
+    )
+    @classmethod
+    def validate_greater_than_zero(
+        cls, v: int | float, info: ValidationInfo
+    ) -> int | float:
+        if v <= 0:
+            raise ValueError(f"{info.field_name} must be greater than zero.")
+        return v
 
     @field_validator("cors_origins")
     @classmethod
