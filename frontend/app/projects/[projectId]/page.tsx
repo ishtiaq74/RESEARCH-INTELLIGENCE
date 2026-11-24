@@ -91,12 +91,23 @@ export default function ProjectDetailPage() {
   }, []);
 
   useEffect(() => {
+    const inputEl = fileInputRef.current;
     return () => {
+      // Next.js 16 cacheComponents preserves component state across navigations
+      // via React <Activity>. Reset transient selection, confirmation, and error
+      // state when leaving or switching projects so stale state never carries over.
       setIsSigningOut(false);
       setIsUploading(false);
       setIsDeleting(false);
+      setSelectedFile(null);
+      setUploadError(null);
+      setDeletingId(null);
+      setDeleteError(null);
+      if (inputEl) {
+        inputEl.value = "";
+      }
     };
-  }, []);
+  }, [projectId]);
 
   // Client-side auth redirect is for UX only; backend enforces ownership on every endpoint.
   const handleAuthError = useCallback(
@@ -136,6 +147,10 @@ export default function ProjectDetailPage() {
         if (!active) return;
         setUser(currentUser);
         setDocuments(docs);
+        setSelectedFile(null);
+        setUploadError(null);
+        setDeletingId(null);
+        setDeleteError(null);
         setLoadError(null);
         setLoadedForId(targetId);
         setPhase("ready");

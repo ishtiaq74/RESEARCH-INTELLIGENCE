@@ -510,3 +510,135 @@ describe("ProjectDetailPage (T3.2e delete flow)", () => {
     });
   });
 });
+
+describe("ProjectDetailPage (T3.2g state hygiene)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams = { projectId: "10" };
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("clears documents, selected file, upload error, and delete confirmation when navigating to another project", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "alice@example.com" });
+    vi.mocked(listDocuments)
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          project_id: 10,
+          original_filename: "project-10.pdf",
+          size_bytes: 1024,
+          page_count: 4,
+          status: "uploaded",
+          created_at: "2026-11-25T00:00:00Z",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 2,
+          project_id: 20,
+          original_filename: "project-20.pdf",
+          size_bytes: 2048,
+          page_count: 7,
+          status: "uploaded",
+          created_at: "2026-11-25T00:00:00Z",
+        },
+      ]);
+
+    const { rerender } = render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("project-10.pdf")).toBeDefined();
+    });
+
+    // Trigger an upload error and open delete confirmation on project 10
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const badFile = new File(["hello"], "bad.txt", { type: "text/plain" });
+    fireEvent.change(fileInput, { target: { files: [badFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Not a PDF.");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(screen.getByText(/delete this document\?/i)).toBeDefined();
+
+    // Navigate to project 20
+    mockParams = { projectId: "20" };
+    rerender(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("project-20.pdf")).toBeDefined();
+    });
+
+    expect(screen.queryByText("project-10.pdf")).toBeNull();
+    expect(screen.queryByText("Not a PDF.")).toBeNull();
+    expect(screen.queryByText(/delete this document\?/i)).toBeNull();
+  });
+
+  it("clears all state on sign-out and does not leak data or button state to next user", async () => {
+    vi.mocked(getMe).mockResolvedValueOnce({
+      id: 1,
+      email: "alice@example.com",
+    });
+    vi.mocked(listDocuments).mockResolvedValueOnce([
+      {
+        id: 11,
+        project_id: 10,
+        original_filename: "alice-private.pdf",
+        size_bytes: 1024,
+        page_count: 2,
+        status: "uploaded",
+        created_at: "2026-11-25T00:00:00Z",
+      },
+    ]);
+    vi.mocked(logout).mockResolvedValueOnce(undefined);
+
+    const { unmount } = render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("alice@example.com")).toBeDefined();
+      expect(screen.getByText("alice-private.pdf")).toBeDefined();
+    });
+
+    // Trigger upload error before signing out
+    const fileInput = screen.getByLabelText(/select pdf file/i);
+    const badFile = new File(["x"], "wrong.docx", { type: "text/plain" });
+    fireEvent.change(fileInput, { target: { files: [badFile] } });
+    fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Not a PDF.");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^sign out$/i }));
+
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith("/login");
+      expect(screen.queryByText("alice@example.com")).toBeNull();
+      expect(screen.queryByText("alice-private.pdf")).toBeNull();
+      expect(screen.queryByText("Not a PDF.")).toBeNull();
+    });
+
+    unmount();
+
+    // User B signs in and visits a project
+    vi.mocked(getMe).mockResolvedValueOnce({
+      id: 2,
+      email: "bob@example.com",
+    });
+    vi.mocked(listDocuments).mockResolvedValueOnce([]);
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("bob@example.com")).toBeDefined();
+      const btn = screen.getByRole("button", { name: /^sign out$/i });
+      expect(btn.textContent).toBe("Sign out");
+      expect(screen.queryByText("alice-private.pdf")).toBeNull();
+      expect(screen.queryByText("Not a PDF.")).toBeNull();
+    });
+  });
+});
