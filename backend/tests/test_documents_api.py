@@ -54,6 +54,7 @@ test_projects.py and test_auth.py patterns.
 from __future__ import annotations
 
 import io
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -420,6 +421,36 @@ class TestUpload:
             remaining = list(tmp_dir.iterdir())
             assert remaining == [], f"Leftover tmp files: {remaining}"
 
+    def test_upload_missing_filename_returns_422_not_500(
+        self, db_and_client: tuple[Session, TestClient, Settings]
+    ) -> None:
+        """Missing or empty filename in multipart part returns clean 422, never 500."""
+        _, client, _ = db_and_client
+        _register_and_login(client, "a@example.com")
+        pid = _create_project(client)
+        pdf = _make_minimal_pdf(pages=1)
+
+        # Case 1: empty filename ("")
+        resp_empty = client.post(
+            f"/projects/{pid}/documents",
+            files={"file": ("", io.BytesIO(pdf), "application/pdf")},
+        )
+        assert resp_empty.status_code == 422
+
+        # Case 2: Content-Disposition with no filename parameter at all
+        boundary = "missingfnboundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="file"\r\n'
+            "Content-Type: application/pdf\r\n\r\n"
+        ).encode() + pdf + f"\r\n--{boundary}--\r\n".encode()
+        resp_omitted = client.post(
+            f"/projects/{pid}/documents",
+            content=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        assert resp_omitted.status_code == 422
+
 
 # ---------------------------------------------------------------------------
 # Size guard tests
@@ -574,6 +605,50 @@ class TestSizeGuard:
         assert resp.status_code == 413
         assert resp.headers.get("cache-control") == "no-store"
         assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+    def test_oversized_chunked_413_leaves_tempdir_empty(
+        self,
+        db_and_client: tuple[Session, TestClient, Settings],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Oversized chunked upload rejected with 413 leaves tempfile.tempdir empty."""
+        _, client, cfg = db_and_client
+        _register_and_login(client, "a@example.com")
+        pid = _create_project(client)
+
+        py_temp = tmp_path / "py_temp"
+        py_temp.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(py_temp))
+
+        boundary = "tempdirboundary"
+        total_body_bytes = cfg.max_upload_bytes + 32 * 1024
+        chunk = b"Z" * 8192
+
+        def stream_chunks() -> Generator[bytes, None, None]:
+            yield (
+                f"--{boundary}\r\n"
+                'Content-Disposition: form-data; name="file"; filename="big.pdf"\r\n'
+                "Content-Type: application/pdf\r\n\r\n"
+            ).encode()
+            sent = 0
+            while sent < total_body_bytes:
+                yield chunk
+                sent += len(chunk)
+            yield f"\r\n--{boundary}--\r\n".encode()
+
+        resp = client.post(
+            f"/projects/{pid}/documents",
+            content=stream_chunks(),
+            headers={
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Origin": "http://localhost:3000",
+            },
+        )
+        assert resp.status_code == 413
+        assert resp.headers.get("cache-control") == "no-store"
+        assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+        assert list(py_temp.iterdir()) == []
 
 
 # ---------------------------------------------------------------------------

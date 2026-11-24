@@ -64,16 +64,17 @@ class UploadSizeGuard:
     """Pure ASGI middleware that rejects oversized uploads before the route runs.
 
     WHY PURE ASGI (not BaseHTTPMiddleware):
-      Starlette's BaseHTTPMiddleware calls `request.body()` which reads the entire
-      body into memory before passing control to the route handler, or buffers via
-      an internal task group. For multipart uploads Starlette also spools parts to
-      temp files before any route code executes, so a size check inside the route
-      handler is too late — the disk write has already occurred.
+      BaseHTTPMiddleware does not read the whole body into memory by itself, but it
+      wraps the ASGI `receive` channel in an internal task-group stream whose
+      `receive()` cannot be cleanly aborted from inside `dispatch()`. Because
+      Starlette also spools multipart uploads to temp files before any route code
+      executes, a size check inside the route handler is too late — the disk write
+      has already occurred.
 
-      By intercepting the raw ASGI `receive` channel we:
+      By intercepting the raw ASGI `receive` channel directly we:
         1. Check the Content-Length header first and reject immediately (zero bytes read).
-        2. Count bytes as they stream in; abort as soon as the limit is exceeded
-           without buffering the full body in memory or spooling past the limit.
+        2. Count bytes as they stream in; abort cleanly as soon as the limit is
+           exceeded without reading or spooling past the limit.
 
     WHY 413 STILL GETS CORS AND CACHE-CONTROL HEADERS:
       This middleware sits innermost (wrapping FastAPI directly), inside
