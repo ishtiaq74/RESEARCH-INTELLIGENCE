@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ProjectDetailPage from "@/app/projects/[projectId]/page";
 import {
   ApiClientError,
+  deleteDocument,
   getMe,
   listDocuments,
   logout,
@@ -32,6 +33,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
     getMe: vi.fn(),
     listDocuments: vi.fn(),
     uploadDocument: vi.fn(),
+    deleteDocument: vi.fn(),
     logout: vi.fn(),
   };
 });
@@ -406,6 +408,102 @@ describe("ProjectDetailPage (T3.2d upload flow)", () => {
     });
     fireEvent.change(fileInput, { target: { files: [pdfFile] } });
     fireEvent.click(screen.getByRole("button", { name: /^upload$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/login");
+    });
+  });
+});
+
+describe("ProjectDetailPage (T3.2e delete flow)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams = { projectId: "10" };
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("requires two-step confirmation before deleting and removes document on 204", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([
+      {
+        id: 42,
+        project_id: 10,
+        original_filename: "to-delete.pdf",
+        size_bytes: 1024,
+        page_count: 3,
+        status: "uploaded",
+        created_at: "2026-11-25T00:00:00Z",
+      },
+    ]);
+    vi.mocked(deleteDocument).mockResolvedValueOnce(undefined);
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("to-delete.pdf")).toBeDefined();
+    });
+
+    // Step 1: click Delete -> should NOT delete immediately
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(deleteDocument).not.toHaveBeenCalled();
+    expect(screen.getByText(/delete this document\?/i)).toBeDefined();
+
+    // Cancel keeps the document
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.getByText("to-delete.pdf")).toBeDefined();
+    expect(deleteDocument).not.toHaveBeenCalled();
+
+    // Step 2: click Delete, then Confirm Delete
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /confirm delete/i })
+    );
+
+    await waitFor(() => {
+      expect(deleteDocument).toHaveBeenCalledWith(10, 42);
+      expect(screen.queryByText("to-delete.pdf")).toBeNull();
+      expect(screen.getByText(/no documents yet/i)).toBeDefined();
+    });
+  });
+
+  it("shows error message if delete fails and redirects on 401", async () => {
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: "user@example.com" });
+    vi.mocked(listDocuments).mockResolvedValueOnce([
+      {
+        id: 43,
+        project_id: 10,
+        original_filename: "locked.pdf",
+        size_bytes: 1024,
+        page_count: 3,
+        status: "uploaded",
+        created_at: "2026-11-25T00:00:00Z",
+      },
+    ]);
+    vi.mocked(deleteDocument)
+      .mockRejectedValueOnce(new ApiClientError("Document not found.", 404))
+      .mockRejectedValueOnce(new ApiClientError("Not authenticated", 401));
+
+    render(<ProjectDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("locked.pdf")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /confirm delete/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Document not found.");
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /confirm delete/i })
+    );
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/login");

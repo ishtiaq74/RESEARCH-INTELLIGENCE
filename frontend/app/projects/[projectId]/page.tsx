@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiClientError,
+  deleteDocument,
   DocumentRead,
   documentUploadErrorMessage,
   getMe,
@@ -57,6 +58,9 @@ export default function ProjectDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Derive effective phase so invalid route params or a projectId change never
@@ -78,6 +82,9 @@ export default function ProjectDetailPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    setDeletingId(null);
+    setIsDeleting(false);
+    setDeleteError(null);
     setLoadError(null);
     setLoadedForId(null);
     setPhase("loading");
@@ -87,6 +94,7 @@ export default function ProjectDetailPage() {
     return () => {
       setIsSigningOut(false);
       setIsUploading(false);
+      setIsDeleting(false);
     };
   }, []);
 
@@ -238,6 +246,36 @@ export default function ProjectDetailPage() {
     }
   }
 
+  function startDelete(documentId: number) {
+    setDeletingId(documentId);
+    setDeleteError(null);
+  }
+
+  function cancelDelete() {
+    setDeletingId(null);
+    setDeleteError(null);
+  }
+
+  async function handleConfirmDelete(documentId: number) {
+    if (projectId === null) return;
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      await deleteDocument(projectId, documentId);
+      setDocuments((prev) => prev.filter((d) => d.id !== documentId));
+      setDeletingId(null);
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      if (err instanceof ApiClientError) {
+        setDeleteError(err.message);
+      } else {
+        setDeleteError("Failed to delete document. Please try again.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
@@ -348,47 +386,102 @@ export default function ProjectDetailPage() {
             </section>
 
             <section aria-labelledby="documents-heading">
-            <h2 id="documents-heading" className={styles.sectionHeading}>
-              Documents ({documents.length})
-            </h2>
+              <h2 id="documents-heading" className={styles.sectionHeading}>
+                Documents ({documents.length})
+              </h2>
 
-            {documents.length === 0 ? (
-              <div className={styles.emptyState}>
-                <p className={styles.emptyHeading}>No documents yet</p>
-                <p className={styles.emptySubtitle}>
-                  This project does not have any uploaded PDFs yet.
-                </p>
-              </div>
-            ) : (
-              <div className={styles.tableWrapper}>
-                <table className={styles.documentTable}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Filename</th>
-                      <th scope="col">Size</th>
-                      <th scope="col">Pages</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Uploaded</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.map((doc) => (
-                      <tr key={doc.id}>
-                        {/* Plain JSX text interpolation only — never innerHTML or download links */}
-                        <td className={styles.filenameCell}>
-                          {doc.original_filename}
-                        </td>
-                        <td>{formatSizeMb(doc.size_bytes)}</td>
-                        <td>{doc.page_count !== null ? doc.page_count : "-"}</td>
-                        <td>{doc.status}</td>
-                        <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+              {deleteError && (
+                <div
+                  className={styles.formError}
+                  role="alert"
+                  aria-live="polite"
+                  style={{ marginBottom: "0.75rem" }}
+                >
+                  {deleteError}
+                </div>
+              )}
+
+              {documents.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p className={styles.emptyHeading}>No documents yet</p>
+                  <p className={styles.emptySubtitle}>
+                    This project does not have any uploaded PDFs yet.
+                  </p>
+                </div>
+              ) : (
+                <div className={styles.tableWrapper}>
+                  <table className={styles.documentTable}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Pages</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Uploaded</th>
+                        <th scope="col">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                    </thead>
+                    <tbody>
+                      {documents.map((doc) => {
+                        const isBeingDeleted = deletingId === doc.id;
+
+                        return (
+                          <tr key={doc.id}>
+                            {/* Plain JSX text interpolation only — never innerHTML or download links */}
+                            <td className={styles.filenameCell}>
+                              {doc.original_filename}
+                            </td>
+                            <td>{formatSizeMb(doc.size_bytes)}</td>
+                            <td>
+                              {doc.page_count !== null ? doc.page_count : "-"}
+                            </td>
+                            <td>{doc.status}</td>
+                            <td>
+                              {new Date(doc.created_at).toLocaleDateString()}
+                            </td>
+                            <td>
+                              {isBeingDeleted ? (
+                                <div className={styles.deleteActions}>
+                                  <span className={styles.deleteWarningText}>
+                                    Delete this document?
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      void handleConfirmDelete(doc.id)
+                                    }
+                                    disabled={isDeleting}
+                                    className={styles.confirmDeleteButton}
+                                  >
+                                    {isDeleting ? "Deleting…" : "Confirm Delete"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelDelete}
+                                    disabled={isDeleting}
+                                    className={styles.secondaryButton}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => startDelete(doc.id)}
+                                  className={styles.dangerButton}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </>
         )}
       </div>

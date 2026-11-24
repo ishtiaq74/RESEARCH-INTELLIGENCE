@@ -156,6 +156,59 @@
   font-size: 0.85rem;
 }
 
+.dangerButton {
+  background: transparent;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error-text);
+  cursor: pointer;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background-color: var(--color-error-bg);
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirmDeleteButton {
+  background-color: var(--color-error-text);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirmDeleteButton:hover:not(:disabled) {
+  background-color: #991b1b;
+}
+
+.confirmDeleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.deleteWarningText {
+  font-size: 0.8rem;
+  color: var(--color-error-text);
+  font-weight: 500;
+}
+
 .secondaryButton {
   background: transparent;
   border: 1px solid var(--color-border);
