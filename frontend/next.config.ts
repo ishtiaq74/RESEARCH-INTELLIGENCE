@@ -8,9 +8,13 @@ import type { NextConfig } from "next";
 //     variants, reducing prefetch payload size (requires cacheComponents: true).
 //     (docs.nextjs.org/docs/app/api-reference/config/next-config-js/partialPrefetching)
 // Both are confirmed valid in NextConfig TypeScript types for Next.js 16.4.2.
+// experimental.agentUpgrade: set to "security" by automated upgrade agent (16.4.2 → 16.4.6).
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    agentUpgrade: "security",
+  },
 };
 
 export default nextConfig;
